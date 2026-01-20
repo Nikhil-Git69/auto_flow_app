@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
 
-
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -29,7 +28,11 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 50),
+              const SizedBox(height: 20),
+
+              Center(child: Image.asset('assets/logo/auto_flow_logo_xl.png')),
+
+              const SizedBox(height: 20),
 
               Text(
                 "Sign In",
@@ -49,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: colorScheme.primary.withValues( alpha: 0.15),
+                      color: colorScheme.primary.withValues(alpha: 0.15),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -106,7 +109,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     CustomButton(
                       text: "LOG IN",
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => NavBarScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NavBarScreen(),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -123,9 +131,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(color: colorScheme.onSurface),
                   ),
                   GestureDetector(
-                    onTap: ()
-                    {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SignupScreen()));
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => SignupScreen()),
+                      );
                     },
                     child: Text(
                       "Create",

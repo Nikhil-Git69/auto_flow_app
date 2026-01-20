@@ -1,11 +1,16 @@
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_dialog.dart';
+import 'package:auto_flow/features/student_portal/change_email/screen/change_email_screen.dart';
+import 'package:auto_flow/features/student_portal/change_password/screen/change_password_screen.dart';
+import 'package:auto_flow/features/student_portal/legalities/privacy_policy/screen/privacy_policy_screen.dart';
+import 'package:auto_flow/features/student_portal/legalities/terms_and_conditions/screen/terms_and_conditions_screen.dart';
 import 'package:auto_flow/features/student_portal/theme_setting/screen/theme_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/features/student_portal/settings/widgets/profile_Header.dart';
 import 'package:auto_flow/features/student_portal/settings/widgets/settings_section_card.dart';
 import 'package:auto_flow/features/student_portal/settings/widgets/settings_tile.dart';
+import 'package:path/path.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,7 +26,7 @@ class SettingsScreen extends StatelessWidget {
           'Settings',
           style: AppTextStyles.midHeader(
             context,
-          ).copyWith(color: Theme.of(context).colorScheme.primary),
+          ).copyWith(color: colorScheme.primary),
         ),
         actions: [
           Padding(
@@ -46,12 +51,26 @@ class SettingsScreen extends StatelessWidget {
               SettingsTile(
                 icon: Icons.key,
                 title: "Change Password",
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChangePasswordScreen(),
+                    ),
+                  );
+                },
               ),
               SettingsTile(
                 icon: Icons.mail_lock,
                 title: "Change Email",
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChangeEmailScreen(),
+                    ),
+                  );
+                },
               ),
               SettingsTile(
                 icon: Icons.confirmation_num,
@@ -102,14 +121,28 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () {},
               ),
               SettingsTile(
-                icon: Icons.rule_outlined,
-                title: "Community Rules",
-                onTap: () {},
+                icon: Icons.privacy_tip,
+                title: "Privacy Policy",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (Context) => PrivacyPolicyScreen(),
+                    ),
+                  );
+                },
               ),
               SettingsTile(
-                icon: Icons.info_outline,
-                title: "About",
-                onTap: () {},
+                icon: Icons.handshake,
+                title: "Terms and Conditions",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TermsAndConditionsScreen(),
+                    ),
+                  );
+                },
               ),
               SettingsTile(
                 icon: Icons.delete_outline,

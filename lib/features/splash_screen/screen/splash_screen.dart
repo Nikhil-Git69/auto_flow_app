@@ -26,12 +26,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          SizedBox(height: 50),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(height: 250),
 
-          Text("Splash Screen", style: TextStyle(fontSize: 20)),
-        ],
+            Center(child: Image.asset("assets/logo/autoflow_splashxl.png")),
+          ],
+        ),
       ),
     );
   }

@@ -26,13 +26,6 @@ class UploadCard extends StatelessWidget {
             color: colorScheme.primary.withValues(alpha: 0.4),
             width: 1.5,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.primary.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -64,7 +57,7 @@ class UploadCard extends StatelessWidget {
                 ".pdf, .docx or .txt",
                 style: TextStyle(
                   fontSize: 13,
-                  color: colorScheme.onSurface.withValues(alpha:0.6),
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
           ],

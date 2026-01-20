@@ -67,7 +67,6 @@ class _UploadScreenState extends State<UploadScreen> {
     });
 
     if (result != null) {
-      // Show feedback in a dialog
       if (!mounted) return;
       showDialog(
         context: context,
@@ -145,7 +144,7 @@ class _UploadScreenState extends State<UploadScreen> {
                   style: AppTextStyles.subMidHeader(context).copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight
-                        .w600, // optional, override subMidHeader if you want bolder
+                        .w600,
                   ),
                 ),
               ),
@@ -160,6 +159,9 @@ class _UploadScreenState extends State<UploadScreen> {
       ).showSnackBar(const SnackBar(content: Text("Upload failed")));
     }
   }
+
+
+
 
   @override
   Widget build(BuildContext context) {

@@ -30,7 +30,11 @@ class _SignupScreenState extends State<SignupScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 50),
+              const SizedBox(height: 20),
+              
+              Center(child: Image.asset('assets/logo/auto_flow_logo_xl.png')),
+
+              const SizedBox(height: 20),
 
               Text(
                 "Sign Up",

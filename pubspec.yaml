@@ -11,6 +11,11 @@ environment:
 
 
 dependencies:
+  flutter_screenutil:
+  pin_code_fields: 
+  shimmer: ^3.0.0
+  shared_preferences: 
+  flutter_secure_storage: ^10.0.0 
   http:
   file_picker:
   path:
@@ -21,14 +26,30 @@ dependencies:
 
   cupertino_icons: ^1.0.8
 
+
+
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
+  
   flutter_test:
     sdk: flutter
 
   flutter_lints: ^5.0.0
 
 
-flutter:
+flutter_launcher_icons:
+  android: true
+  ios: true
 
+  adaptive_icon_background: "#0FCCBF" 
+  adaptive_icon_foreground: assets/icon/icon_foreground.png
+  image_path: assets/icon/playstore-icon.png
+
+
+flutter:
+  assets:
+    - assets/user/
+    - assets/logo/
+    - assets/icon/
 
   uses-material-design: true

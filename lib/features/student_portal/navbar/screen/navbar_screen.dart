@@ -35,9 +35,9 @@ class _NavBarScreenState extends State<NavBarScreen> {
       body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: colorScheme.surface, // theme-aware
+        backgroundColor: colorScheme.surface,
         currentIndex: _currentIndex,
-        selectedItemColor: colorScheme.primary, // theme-aware
+        selectedItemColor: colorScheme.primary,
         unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.6),
         onTap: _onNavPageTapped,
         items: const [

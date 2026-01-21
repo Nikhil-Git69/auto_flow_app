@@ -1,3 +1,4 @@
+import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
@@ -27,14 +28,14 @@ class _SignupScreenState extends State<SignupScreen> {
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: AppPaddings.all16,
           child: Column(
             children: [
-              const SizedBox(height: 20),
-              
-              Center(child: Image.asset('assets/logo/auto_flow_logo_xl.png')),
+              Center(
+                  child: Image.asset('assets/logo/fullscale.png', height: 120,),
+              ),
 
-              const SizedBox(height: 20),
+               SizedBox(height: 10),
 
               Text(
                 "Sign Up",
@@ -48,7 +49,7 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 40),
 
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: AppPaddings.all16,
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),

@@ -1,3 +1,4 @@
+import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/features/auth/sign_up/screen/signup_screen.dart';
 import 'package:auto_flow/features/student_portal/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
@@ -25,14 +26,13 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: AppPaddings.all16,
           child: Column(
             children: [
-              const SizedBox(height: 20),
 
-              Center(child: Image.asset('assets/logo/auto_flow_logo_xl.png')),
+              Center(child: Image.asset('assets/logo/fullscale.png', height: 120,)),
 
-              const SizedBox(height: 20),
+              SizedBox(height: 10),
 
               Text(
                 "Sign In",
@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 40),
 
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: AppPaddings.all16,
                 decoration: BoxDecoration(
                   color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
@@ -68,7 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     const SizedBox(height: 16),
 
-                    /// Password Field
                     CustTextfield(
                       controller: passwordController,
                       labelText: "Password",

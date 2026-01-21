@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:auto_flow/constants/app_textstyles.dart';
+import 'package:auto_flow/features/student_portal/detail/screen/detail_screen.dart';
 import 'package:auto_flow/features/student_portal/upload/widget/guidelines_card.dart';
 import 'package:auto_flow/features/student_portal/upload/widget/upload_card.dart';
+import 'package:auto_flow/models/request_models/guideline_model.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
@@ -16,18 +18,20 @@ class UploadScreen extends StatefulWidget {
 }
 
 class _UploadScreenState extends State<UploadScreen> {
-  File? selectedFile;  
-  bool aiFeedback = false; 
-  bool isLoading = false; 
-  UploadModel? uploadResult;
+  GuidelinesModel selectedGuidelines = GuidelinesModel.defaults();
 
-  final api = ApiService(apiKey: 'Bearer super-secret-key');
+  File? selectedFile;
+  bool aiFeedback = false;
+  bool isLoading = false;
+  AnalysisModel? uploadResult;
+
+  final api = AnalysisApiService(apiKey: 'Bearer super-secret-key');
 
   //file pickers func
   Future<void> pickFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'docx'],
+      allowedExtensions: ['pdf', 'docx', 'doc'],
     );
 
     if (result != null && result.files.single.path != null) {
@@ -45,12 +49,34 @@ class _UploadScreenState extends State<UploadScreen> {
 
   //uplaod file api func
   Future<void> uploadFile() async {
+    if(!mounted) return;
+
     if (selectedFile == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a file first")),
-      );
+      showDialog(context: context, builder: (_) => AlertDialog(
+        title: Text("Error"),
+        content: Text("Please select a file first"),
+        actions: [
+          CustomButton(text: "Okay", onPressed: ()
+          {
+            Navigator.pop(context);
+          },)
+        ],
+      ));
       return;
     }
+
+    if (selectedGuidelines == null) {
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text("Error"),
+          content: Text("Please set report guidelines first."),
+        ),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
 
     setState(() {
       isLoading = true;
@@ -59,109 +85,76 @@ class _UploadScreenState extends State<UploadScreen> {
     final result = await api.uploadReport(
       file: selectedFile!,
       aiFeedback: aiFeedback,
+      guidelines: selectedGuidelines!,
     );
+
+    if (result == null) {
+      setState(() {
+        isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Network error. Please try again."),
+          actions: [
+            CustomButton(
+              text: "Okay",
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
+
+      return;
+    }
 
     setState(() {
       isLoading = false;
       uploadResult = result;
     });
 
-    if (result != null) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          final theme = Theme.of(context);
-          final colorScheme = theme.colorScheme;
-          final textTheme = theme.textTheme;
 
-          return AlertDialog(
-            backgroundColor: colorScheme.surface,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+
+    final success = result.code == 200;
+
+      if (success) {
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailScreen(
+              file: result.data!.file!,               // must exist
+              formatFeedback: result.data!.formatFeedback!, // must exist
+              contentFeedback: result.data!.contentFeedback ?? [],
             ),
+          ),
+        );
+      } else {
+        if (!mounted) return;
 
-            title: Center(
-              child: Text(
-                "Upload Result",
-                style: AppTextStyles.midHeader(
-                  context,
-                ).copyWith(color: colorScheme.primary),
-              ),
-            ),
 
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Format Feedback",
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colorScheme.secondary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  result.data?.formatFeedback?.join(", ") ?? "N/A",
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                if ((result.data?.contentFeedback ?? []).isNotEmpty) ...[
-                  Text(
-                    "Content Feedback",
-                    style: textTheme.labelMedium?.copyWith(
-                      color: colorScheme.secondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    (result.data?.contentFeedback ?? []).join(", "),
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-
-            actionsAlignment: MainAxisAlignment.center,
-            actions: [
-              TextButton(
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
-                ),
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  "OK",
-                  style: AppTextStyles.subMidHeader(context).copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight
-                        .w600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+      showDialog(context: context, builder: (_) =>AlertDialog(
+       title: Center(child: Text("Error")),
+        content: SizedBox(
+          height: 50,
+        child: Text(result.message.isNotEmpty
+            ? result.message
+            : "Error Uploading the File. Please try again later."),
+        ),
+        actions: [
+          CustomButton(text: "Okay", onPressed: () {
+            Navigator.pop(context);
+          },)
+        ],
+      )
       );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Upload failed")));
     }
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +184,17 @@ class _UploadScreenState extends State<UploadScreen> {
                   fileName: selectedFileName,
                 ),
               ),
-              GuidelinesCard(),
+              GuidelinesCard(
+                onChanged: (guidelines) {
+                  setState(() {
+                    selectedGuidelines = guidelines;
+                  });
+
+                  debugPrint(
+                    "GUIDELINES RECEIVED IN UPLOAD: ${guidelines.toJson()}",
+                  );
+                },
+              ),
             ],
           ),
         ),

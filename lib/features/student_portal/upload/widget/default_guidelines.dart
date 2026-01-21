@@ -9,9 +9,12 @@ class DefaultGuidelines extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        GuidelineRow(label: "Margin", value: "1 inch"),
+        GuidelineRow(label: "Left Margin", value: "1.5 inch"),
+        GuidelineRow(label: "Right Margin", value: "1 inch"),
+        GuidelineRow(label: "Top Margin", value: "1 inch"),
+        GuidelineRow(label: "Bottom Margin", value: "1 inch"),
         GuidelineRow(label: "Line Spacing", value: "1.5"),
-        GuidelineRow(label: "Font", value: "Times New Roman"),
+        // GuidelineRow(label: "Font", value: "Times New Roman"),
         GuidelineRow(label: "Font Size", value: "12"),
       ],
     );

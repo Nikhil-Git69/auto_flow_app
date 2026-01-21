@@ -3,25 +3,24 @@ import 'dart:developer';
 import 'dart:convert';
 import 'package:auto_flow/constants/api_urls.dart';
 import 'package:auto_flow/models/api_models/upload_model.dart';
+import 'package:auto_flow/models/request_models/guideline_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 
-class ApiService {
+class AnalysisApiService {
   final String apiKey;
 
-  ApiService({required this.apiKey});
+  AnalysisApiService({required this.apiKey});
 
-  /// Upload a report file with optional AI feedback
-  Future<UploadModel?> uploadReport({
+  Future<AnalysisModel?> uploadReport({
     required File file,
+    required GuidelinesModel guidelines,
     bool aiFeedback = false,
   }) async {
     try {
       final uri = Uri.parse(ApiUrl.analysisUpload);
-
       final request = http.MultipartRequest('POST', uri);
 
-      // Add the file
       request.files.add(
         await http.MultipartFile.fromPath(
           'file',
@@ -30,36 +29,26 @@ class ApiService {
         ),
       );
 
-      // Add AI feedback as a form field
-      request.fields['aiFeedback'] = aiFeedback.toString(); // "true"/"false"
-
-      // Add Authorization header
+      request.fields['aiFeedback'] = aiFeedback.toString();
+      request.fields['guidelines'] = jsonEncode(guidelines.toJson());
       request.headers['Authorization'] = apiKey;
 
-      // Send the request
       final response = await request.send();
-
-      // Convert response stream to string
       final respStr = await response.stream.bytesToString();
+
       log("Upload API Response: $respStr");
-      // Check HTTP status code first
-      if (response.statusCode == 200) {
-        final jsonMap = jsonDecode(respStr);
+      log("Upload API Request: $file, $guidelines, $aiFeedback");
 
-        final uploadModel = UploadModel.fromJson(jsonMap);
+      final jsonMap = jsonDecode(respStr);
+      final analysisModel = AnalysisModel.fromJson(jsonMap);
 
-        if (uploadModel.code == 200) {
-          return uploadModel;
-        } else {
-          log('API returned error code: ${uploadModel.code}');
-          return uploadModel;
-        }
-      } else {
-        log('HTTP error ${response.statusCode}: $respStr');
-        return null;
+      if (response.statusCode != 200) {
+        log('HTTP error ${response.statusCode}');
       }
+
+      return analysisModel;
     } catch (e) {
-      log('Exception: $e');
+      log('Upload exception: $e');
       return null;
     }
   }

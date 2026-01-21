@@ -8,21 +8,21 @@ final ThemeData darkTheme = ThemeData(
   colorScheme: const ColorScheme(
     brightness: Brightness.dark,
 
-    // PRIMARY (Teal)
+    // primary
     primary: AppColors.primaryDark,
     onPrimary: Color(0xFF00332D),
 
     primaryContainer: AppColors.primaryVariant,
     onPrimaryContainer: Colors.white,
 
-    // SECONDARY
+    // secondary
     secondary: AppColors.secondaryDark,
     onSecondary: Color(0xFF00363A),
 
     secondaryContainer: AppColors.secondaryVariant,
     onSecondaryContainer: Colors.white,
 
-    // SURFACE & BACKGROUND
+    // surafce
     surface: AppColors.surfaceDark,
     onSurface: AppColors.textPrimaryDark,
 

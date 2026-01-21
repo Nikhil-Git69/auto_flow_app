@@ -1,5 +1,11 @@
 class ApiUrl {
-  static const String baseUrl = "http://192.168.1.95:6969";
+  // static const String baseUrl = "http://192.168.1.95:6969";
+
+  //office
+  // static const String baseUrl = "http://192.168.1.70:6969";
+
+  //home
+  static const String baseUrl = "http://192.168.1.7:6969 ";
 
   //Auth
   static const String login = "";

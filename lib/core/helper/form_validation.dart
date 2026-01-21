@@ -53,7 +53,7 @@ class FormValidators {
 
   static String? validateUsername(String? value) {
     if (value == null || value.trim().isEmpty) {
-      return 'Email or Username is required';
+      return 'Username is required';
     }
 
     final usernameRegex = RegExp(r'^[a-zA-Z0-9._-]{3,20}$');

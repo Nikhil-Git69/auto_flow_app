@@ -23,11 +23,11 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
+      title: 'Auto Flow',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: themeMode,
-  
+
       home: SplashScreen(),
     );
   }

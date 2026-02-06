@@ -94,12 +94,6 @@ class FormValidators {
     return null;
   }
 
-  static String? validateMessage(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Message is required';
-    }
-    return null;
-  }
 
   static String? validateConfirmPassword(String? value, String password) {
     if (value == null || value.trim().isEmpty) {
@@ -115,7 +109,6 @@ class FormValidators {
     return null;
   }
 
-  //Login Page Validation
   static String? validLoginEmail(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Email is required';

@@ -30,4 +30,8 @@ class AppColors {
   static const Color success = Color(0xFF4CAF50);
   static const Color error = Color(0xFFCF6679);
   static const Color accent = Color(0xFFFFB74D);
+
+
+
+
 }

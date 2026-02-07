@@ -1,4 +1,5 @@
 import 'package:auto_flow/constants/app_paddings.dart';
+import 'package:auto_flow/features/auth/forgot_password/screen/verify_email_screen.dart';
 import 'package:auto_flow/features/auth/sign_up/screen/signup_screen.dart';
 import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
@@ -160,7 +161,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: ()
+                            {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen()));
+                            },
                             child: Text(
                               "Forgot password?",
                               style: TextStyle(color: colorScheme.primary),

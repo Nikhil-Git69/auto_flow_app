@@ -25,7 +25,7 @@ class _UploadScreenState extends State<UploadScreen> {
   bool isLoading = false;
   AnalysisModel? uploadResult;
 
-  final api = AnalysisApiService(apiKey: 'Bearer super-secret-key');
+  final api = AnalysisApiService(apiKey: 'Bearer NikhilDai123');
 
   //file pickers func
   Future<void> pickFile() async {

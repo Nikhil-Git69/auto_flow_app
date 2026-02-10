@@ -1,12 +1,15 @@
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/core/helper/form_validation.dart';
 import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
-import 'package:auto_flow/features/auth/sign_up/screen/signup_otp_screen.dart';
 import 'package:auto_flow/features/auth/sign_up/service/signup_service.dart';
+import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 
+// ... imports ...
+
+// ... imports ...
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,79 +19,61 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-
-
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmController = TextEditingController();
+
+  // Default values as they are not in UI
+  final String collegeName = "Default College";
+  final String role = "student";
+
   final _formKey = GlobalKey<FormState>();
 
   bool isLoading = false;
 
   Future<void> handleSignup() async {
-    try {
-      setState(() {
-        isLoading = true;
-      });
+    setState(() => isLoading = true);
 
-      final response = await SignupService.signup(
-        name: nameController.text.trim(),
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+    final response = await SignupService.signup(
+      name: nameController.text.trim(),
+      email: emailController.text.trim(),
+      password: passwordController.text.trim(),
+      collegeName: collegeName,
+      role: role,
+    );
+
+    if (!mounted) return;
+    setState(() => isLoading = false);
+
+    if (response['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Account Created Successfully"),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
       );
-
-      if(!mounted) return;
-
-      if (response.success) {
-        setState(() {
-          isLoading = false;
-        });
-        final email = response.data?.email ?? emailController.text.trim();
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SignupOtpScreen(signupMail: email, redoOtp: false),
-          ),
-        );
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-
-        showDialog(context: context, barrierDismissible: false, builder: (_) => AlertDialog(
-          title: Center(child: Text("Signup Failed")),
-          content: Text(response.message),
+      // Navigate to Home directly
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NavBarScreen()),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Signup Failed"),
+          content: Text(response['message'] ?? "Unknown error"),
           actions: [
-            TextButton(onPressed: () {Navigator.pop(context);}, child: Text("Okay")),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Okay"),
+            ),
           ],
-        ));
-
-
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-
-      showDialog(context: context, barrierDismissible: false, builder: (_) => AlertDialog(
-        title: Center(child: Text("Error")),
-        content: Text(e.toString()),
-        actions: [
-          TextButton(onPressed: () {Navigator.pop(context);}, child: Text("Okay")),
-        ],
-      ));
-
+        ),
+      );
     }
   }
-
-
-
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -103,15 +88,11 @@ class _SignupScreenState extends State<SignupScreen> {
             padding: AppPaddings.all16,
             child: Column(
               children: [
-
-                SizedBox(height: 60),
-
+                const SizedBox(height: 40),
                 Center(
-                    child: Image.asset('assets/logo/fullscale.png', height: 120,),
+                  child: Image.asset('assets/logo/fullscale.png', height: 100),
                 ),
-
-                 SizedBox(height: 25),
-
+                const SizedBox(height: 20),
                 Text(
                   "Sign Up",
                   style: TextStyle(
@@ -120,9 +101,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     color: colorScheme.onSurface,
                   ),
                 ),
-
-                const SizedBox(height: 50),
-
+                const SizedBox(height: 30),
                 Form(
                   key: _formKey,
                   child: Container(
@@ -146,18 +125,14 @@ class _SignupScreenState extends State<SignupScreen> {
                           icon: Icons.person_outline,
                           validator: FormValidators.validateName,
                         ),
-
                         const SizedBox(height: 16),
-
                         CustTextfield(
                           controller: emailController,
                           labelText: "E-mail",
                           icon: Icons.email_outlined,
                           validator: FormValidators.validateEmail,
                         ),
-
                         const SizedBox(height: 16),
-
                         CustTextfield(
                           controller: passwordController,
                           labelText: "Password",
@@ -165,37 +140,34 @@ class _SignupScreenState extends State<SignupScreen> {
                           isPassword: true,
                           validator: FormValidators.validatePassword,
                         ),
-
                         const SizedBox(height: 16),
-
                         CustTextfield(
                           controller: confirmController,
                           labelText: "Confirm Password",
                           icon: Icons.lock_outline,
                           isPassword: true,
-                          validator: (value) => FormValidators.validateConfirmPassword(
-                            value,
-                            confirmController.text,
-                          ),
+                          validator: (value) =>
+                              FormValidators.validateConfirmPassword(
+                                value,
+                                confirmController.text,
+                              ),
                         ),
-
                         const SizedBox(height: 24),
-
                         CustomButton(
-                          text: isLoading ? "Signing up..." :"Signup",
-                          onPressed: () {
-                            if (_formKey.currentState!.validate()) {
-                                  handleSignup();
-                            }
-                          },
+                          text: isLoading ? "Signing up..." : "Signup",
+                          onPressed: isLoading
+                              ? null
+                              : () {
+                                  if (_formKey.currentState!.validate()) {
+                                    handleSignup();
+                                  }
+                                },
                         ),
                       ],
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -205,7 +177,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
-                       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => LoginScreen())); // go back to login
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                        );
                       },
                       child: Text(
                         "Sign In",

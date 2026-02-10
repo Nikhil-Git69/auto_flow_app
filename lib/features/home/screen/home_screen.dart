@@ -4,6 +4,7 @@ import 'package:auto_flow/features/home/widgets/profile_Header.dart';
 import 'package:auto_flow/features/home/widgets/section_card.dart';
 import 'package:auto_flow/features/home/widgets/tool_tiles.dart';
 import 'package:flutter/material.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -19,7 +20,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text("Home", style: AppTextStyles.midHeader(context).copyWith(color: colorScheme.primary),),
+        title: Text(
+          "Home",
+          style: AppTextStyles.midHeader(
+            context,
+          ).copyWith(color: colorScheme.primary),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -32,14 +38,23 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: AppPaddings.all16,
         child: SingleChildScrollView(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ProfileHeader(colorScheme: colorScheme),
               const SizedBox(height: 24),
-              SectionCard(title: "Upload Limit", icon: Icons.warning,
-                  child: Text("Upload limit for the day: 1/3 left",
-                    style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface),)),
+              SectionCard(
+                title: "Upload Limit",
+                icon: Icons.warning,
+                child: Text(
+                  "Upload limit for the day: 1/3 left",
+                  style: AppTextStyles.smallHeader(
+                    context,
+                  ).copyWith(color: colorScheme.onSurface),
+                ),
+              ),
               const SizedBox(height: 24),
-          
+
               SectionCard(
                 title: "Explore Tools",
                 icon: Icons.explore_outlined,
@@ -64,32 +79,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-          
-              SectionCard(
-                title: "Tips & Reminders",
-                icon: Icons.lightbulb_outline,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children:  [
-                    Text("• Upload supported document types only (PDF, DOCX)",
-                        style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface)),
-                    SizedBox(height: 6),
-                    Text("• Large files may take longer to process",
-                        style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface)),
-                    SizedBox(height: 6),
-                    Text("• AI feedback is advisory — always review manually",
-                        style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface)),
-                    SizedBox(height: 6),
-                    Text("• Keep documents well-structured for optimal validation",
-                        style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface)),
-                    SizedBox(height: 6),
-                    Text("• PDF validation may have limitations depending on formatting,\n  embedded fonts, or scanned content.",
-                        style: AppTextStyles.smallHeader(context).copyWith(color: colorScheme.onSurface)),
-          
-                  ],
-                ),
+
+              Text(
+                "Recent Analysis",
+                style: AppTextStyles.subMidHeader(
+                  context,
+                ).copyWith(color: colorScheme.primary),
               ),
-              const SizedBox(height: 10),
             ],
           ),
         ),

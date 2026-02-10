@@ -5,13 +5,16 @@ import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
-import 'package:auto_flow/features/auth/forgot_password/service/reset_password_service.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String email;
   final String otp;
 
-  const ResetPasswordScreen({super.key, required this.email, required this.otp});
+  const ResetPasswordScreen({
+    super.key,
+    required this.email,
+    required this.otp,
+  });
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -38,7 +41,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     );
   }
 
-
   void _showSuccessDialog(String message) {
     showDialog(
       context: context,
@@ -51,58 +53,53 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Navigator.pop(context);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => const LoginScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
         },
       ),
     );
   }
 
-
-  Future<void> _handleResetPassword() async {
-    final newPass = newPassController.text.trim();
-    final confirmPass = confirmPassController.text.trim();
-
-    if (newPass.isEmpty || confirmPass.isEmpty) {
-      _showErrorDialog("Please fill in both password fields.");
-      return;
-    }
-
-    if (newPass.length < 6) {
-      _showErrorDialog("Password must be at least 6 characters.");
-      return;
-    }
-
-    if (newPass != confirmPass) {
-      _showErrorDialog("Passwords do not match.");
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    final response = await ResetPasswordService.resetPassword(
-      email: widget.email,
-      newPassword: newPass,
-      otp: widget.otp,
-    );
-
-    if (!mounted) return;
-    setState(() => isLoading = false);
-
-    final bool success = response["success"] == true;
-    final int code = response["code"] ?? 500;
-    final String message = response["message"] ?? "Something went wrong";
-
-    if (success && code == 200) {
-      _showSuccessDialog(message);
-    } else {
-      _showErrorDialog(message);
-    }
-  }
-
-
+  // Future<void> _handleResetPassword() async {
+  //   final newPass = newPassController.text.trim();
+  //   final confirmPass = confirmPassController.text.trim();
+  //
+  //   if (newPass.isEmpty || confirmPass.isEmpty) {
+  //     _showErrorDialog("Please fill in both password fields.");
+  //     return;
+  //   }
+  //
+  //   if (newPass.length < 6) {
+  //     _showErrorDialog("Password must be at least 6 characters.");
+  //     return;
+  //   }
+  //
+  //   if (newPass != confirmPass) {
+  //     _showErrorDialog("Passwords do not match.");
+  //     return;
+  //   }
+  //
+  //   setState(() => isLoading = true);
+  //
+  //   final response = await ResetPasswordService.resetPassword(
+  //     email: widget.email,
+  //     newPassword: newPass,
+  //     otp: widget.otp,
+  //   );
+  //
+  //   if (!mounted) return;
+  //   setState(() => isLoading = false);
+  //
+  //   final bool success = response["success"] == true;
+  //   final int code = response["code"] ?? 500;
+  //   final String message = response["message"] ?? "Something went wrong";
+  //
+  //   if (success && code == 200) {
+  //     _showSuccessDialog(message);
+  //   } else {
+  //     _showErrorDialog(message);
+  //   }
+  // }
 
   @override
   void dispose() {
@@ -122,7 +119,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         backgroundColor: cs.surface,
         surfaceTintColor: cs.surface,
         centerTitle: true,
-        title: Text("Set New Password", style: AppTextStyles.midHeader(context)),
+        title: Text(
+          "Set New Password",
+          style: AppTextStyles.midHeader(context),
+        ),
       ),
       body: SafeArea(
         child: Padding(
@@ -134,14 +134,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               children: [
                 const SizedBox(height: 20),
 
-                Text("Create a new password",
-                    style: AppTextStyles.largeHeader(context)),
+                Text(
+                  "Create a new password",
+                  style: AppTextStyles.largeHeader(context),
+                ),
                 const SizedBox(height: 8),
 
                 Text(
                   "Your new password must be different from previously used passwords.",
-                  style: AppTextStyles.subMidHeader(context)
-                      .copyWith(color: cs.onSurfaceVariant),
+                  style: AppTextStyles.subMidHeader(
+                    context,
+                  ).copyWith(color: cs.onSurfaceVariant),
                 ),
 
                 const SizedBox(height: 18),
@@ -159,12 +162,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   controller: confirmPassController,
                   labelText: "Confirm New Password",
                   isPassword: true,
-                  validator:  (value) => FormValidators.validateConfirmPassword(
+                  validator: (value) => FormValidators.validateConfirmPassword(
                     value,
                     confirmPassController.text,
                   ),
                 ),
-
 
                 const SizedBox(height: 26),
 
@@ -172,12 +174,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   width: double.infinity,
                   height: 50,
                   child: CustomButton(
-                    onPressed: ()
-                    {
-                      if(_formKey.currentState!.validate())
-                        {
-                            _handleResetPassword();
-                        }
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        // _handleResetPassword();
+                      }
                     },
                     text: isLoading ? "Updating..." : "Update Password",
                   ),

@@ -1,13 +1,10 @@
 import 'package:auto_flow/constants/app_paddings.dart';
-import 'package:auto_flow/features/auth/forgot_password/screen/verify_email_screen.dart';
 import 'package:auto_flow/features/auth/sign_up/screen/signup_screen.dart';
 import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
 import 'package:auto_flow/features/auth/login/service/login_service.dart';
-import 'package:auto_flow/features/auth/sign_up/screen/signup_otp_screen.dart';
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,31 +43,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final response = await LoginService.login(
-      email: email,
-      password: password,
-    );
+    final response = await LoginService.login(email: email, password: password);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
 
     if (response["success"] == true) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => NavBarScreen()),
-      );
-      return;
-    }
-
-    if (response["unverified"] == true || response["code"] == 422) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SignupOtpScreen(
-            signupMail: email,
-            redoOtp: true,
-          ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Login Successful"),
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NavBarScreen()),
       );
       return;
     }
@@ -78,14 +65,12 @@ class _LoginScreenState extends State<LoginScreen> {
     _showSnack(response["message"] ?? "Login failed");
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
     return PopScope(
-     canPop: false,
+      canPop: false,
       child: Scaffold(
         backgroundColor: colorScheme.surface,
         body: SafeArea(
@@ -93,11 +78,11 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: AppPaddings.all16,
             child: Column(
               children: [
-
                 SizedBox(height: 60),
 
-
-                Center(child: Image.asset('assets/logo/fullscale.png', height: 120,)),
+                Center(
+                  child: Image.asset('assets/logo/fullscale.png', height: 120),
+                ),
 
                 SizedBox(height: 25),
 
@@ -161,10 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: ()
-                            {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen()));
-                            },
+                            onPressed: () {},
                             child: Text(
                               "Forgot password?",
                               style: TextStyle(color: colorScheme.primary),
@@ -196,7 +178,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => SignupScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => SignupScreen(),
+                          ),
                         );
                       },
                       child: Text(

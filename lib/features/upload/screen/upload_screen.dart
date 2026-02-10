@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/features/detail/screen/detail_screen.dart';
@@ -23,9 +24,6 @@ class _UploadScreenState extends State<UploadScreen> {
   File? selectedFile;
   bool aiFeedback = true;
   bool isLoading = false;
-  AnalysisModel? uploadResult;
-
-  final api = AnalysisApiService(apiKey: 'Bearer NikhilDai123');
 
   //file pickers func
   Future<void> pickFile() async {
@@ -49,109 +47,71 @@ class _UploadScreenState extends State<UploadScreen> {
 
   //uplaod file api func
   Future<void> uploadFile() async {
-    if(!mounted) return;
+    if (!mounted) return;
 
     if (selectedFile == null) {
-      showDialog(context: context, builder: (_) => AlertDialog(
-        title: Text("Error"),
-        content: Text("Please select a file first"),
-        actions: [
-          CustomButton(text: "Okay", onPressed: ()
-          {
-            Navigator.pop(context);
-          },)
-        ],
-      ));
-      return;
-    }
-
-    if (selectedGuidelines == null) {
       showDialog(
         context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("Error"),
-          content: Text("Please set report guidelines first."),
+        builder: (_) => AlertDialog(
+          title: const Text("Error"),
+          content: const Text("Please select a file first"),
+          actions: [
+            CustomButton(text: "Okay", onPressed: () => Navigator.pop(context)),
+          ],
         ),
       );
-      setState(() => isLoading = false);
       return;
     }
-
 
     setState(() {
       isLoading = true;
     });
 
-    final result = await api.uploadReport(
-      file: selectedFile!,
-      aiFeedback: aiFeedback,
-      guidelines: selectedGuidelines,
+    log("UploadScreen: Preparing to upload file: ${selectedFile!.path}");
+
+    final formatRequirements = UploadService.generateRequirementsString(
+      selectedGuidelines.toJson(),
     );
 
-    if (result == null) {
-      setState(() {
-        isLoading = false;
-      });
+    final isCustom =
+        selectedGuidelines.fontSize != 12 || selectedGuidelines.spacing != 1.5;
+    final formatType = isCustom ? 'custom' : 'default';
 
-      if (!mounted) return;
+    log("UploadScreen: Calling UploadService with formatType: $formatType");
 
+    final result = await UploadService.uploadFile(
+      file: selectedFile!,
+      formatType: formatType,
+      formatRequirements: formatRequirements,
+    );
+
+    log("UploadScreen: Service returned result: $result");
+
+    if (!mounted) return;
+    setState(() {
+      isLoading = false;
+    });
+
+    if (result['success'] == true && result['data'] != null) {
+      log("UploadScreen: Upload successful, navigating to details");
+      final analysis = result['data'] as AnalysisModel;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DetailScreen(analysis: analysis),
+        ),
+      );
+    } else {
+      log("UploadScreen: Upload failed - ${result['message']}");
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text("Error"),
-          content: const Text("Network error. Please try again."),
+          title: const Center(child: Text("Error")),
+          content: Text(result['message'] ?? "Error Uploading the File."),
           actions: [
-            CustomButton(
-              text: "Okay",
-              onPressed: () => Navigator.pop(context),
-            ),
+            CustomButton(text: "Okay", onPressed: () => Navigator.pop(context)),
           ],
         ),
-      );
-
-      return;
-    }
-
-    setState(() {
-      isLoading = false;
-      uploadResult = result;
-    });
-
-
-
-    final success = result.code == 200;
-
-      if (success) {
-        if (!mounted) return;
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DetailScreen(
-              file: result.data!.file,
-              formatFeedback: result.data!.formatFeedback,
-              contentFeedback: result.data!.contentFeedback ?? [],
-            ),
-          ),
-        );
-      } else {
-        if (!mounted) return;
-
-
-      showDialog(context: context, builder: (_) =>AlertDialog(
-       title: Center(child: Text("Error")),
-        content: SizedBox(
-          height: 50,
-        child: Text(result.message.isNotEmpty
-            ? result.message
-            : "Error Uploading the File. Please try again later."),
-        ),
-        actions: [
-          CustomButton(text: "Okay", onPressed: () {
-            Navigator.pop(context);
-          },)
-        ],
-      )
       );
     }
   }
@@ -184,17 +144,18 @@ class _UploadScreenState extends State<UploadScreen> {
                   fileName: selectedFileName,
                 ),
               ),
-              GuidelinesCard(
-                onChanged: (guidelines) {
-                  setState(() {
-                    selectedGuidelines = guidelines;
-                  });
 
-                  debugPrint(
-                    "GUIDELINES RECEIVED IN UPLOAD: ${guidelines.toJson()}",
-                  );
-                },
-              ),
+              // GuidelinesCard(
+              //   onChanged: (guidelines) {
+              //     setState(() {
+              //       selectedGuidelines = guidelines;
+              //     });
+
+              //     debugPrint(
+              //       "GUIDELINES RECEIVED IN UPLOAD: ${guidelines.toJson()}",
+              //     );
+              //   },
+              // ),
             ],
           ),
         ),
@@ -205,6 +166,9 @@ class _UploadScreenState extends State<UploadScreen> {
           child: CustomButton(
             text: isLoading ? "UPLOADING..." : "UPLOAD",
             onPressed: selectedFile != null && !isLoading ? uploadFile : null,
+            textColor: selectedFile != null && !isLoading
+                ? Colors.white
+                : Colors.grey,
           ),
         ),
       ),

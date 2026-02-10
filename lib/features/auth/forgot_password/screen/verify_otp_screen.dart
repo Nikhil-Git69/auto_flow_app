@@ -1,10 +1,8 @@
 import 'dart:async';
 
 import 'package:auto_flow/features/auth/forgot_password/service/verify_forgotpassword_otp_service.dart';
-import 'package:auto_flow/service/otp/resend_otp_service.dart';
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/features/auth/forgot_password/screen/reset_password_screen.dart';
@@ -84,77 +82,77 @@ class _VerifyForgotPasswordOtpScreenState
     );
   }
 
-  Future<void> _handleVerifyOtp() async {
-    final otp = pinController.text.trim();
+  // Future<void> _handleVerifyOtp() async {
+  //   final otp = pinController.text.trim();
+  //
+  //   if (otp.length != 6) {
+  //     _showErrorDialog("Please enter a valid 6-digit OTP");
+  //     return;
+  //   }
+  //
+  //   setState(() {
+  //     isLoading = true;
+  //     isOtpInvalid = false;
+  //   });
+  //
+  //   final response = await VerifyForgotPasswordOtpService.verifyOtp(
+  //     email: widget.email,
+  //     otp: otp,
+  //   );
+  //
+  //   if (!mounted) return;
+  //
+  //   setState(() => isLoading = false);
+  //
+  //   final bool success = response["success"] == true;
+  //   final int code = response["code"] ?? 500;
+  //   final String message = response["message"] ?? "Something went wrong";
+  //
+  //   if (success && code == 200) {
+  //     showSnackMessage(context, message);
+  //     Navigator.pushReplacement(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (_) => ResetPasswordScreen(email: widget.email,otp: otp ),
+  //       ),
+  //     );
+  //   } else {
+  //     setState(() => isOtpInvalid = true);
+  //     _showErrorDialog(message);
+  //   }
+  // }
 
-    if (otp.length != 6) {
-      _showErrorDialog("Please enter a valid 6-digit OTP");
-      return;
-    }
+  // Future<void> _handleResendOtp() async {
+  //   if (!canResend) return;
 
-    setState(() {
-      isLoading = true;
-      isOtpInvalid = false;
-    });
+  //   final response = await ResendOtpService.resendOtp(
+  //     email: widget.email,
+  //     type: "forgot",
+  //   );
 
-    final response = await VerifyForgotPasswordOtpService.verifyOtp(
-      email: widget.email,
-      otp: otp,
-    );
+  //   if (!mounted) return;
 
-    if (!mounted) return;
-
-    setState(() => isLoading = false);
-
-    final bool success = response["success"] == true;
-    final int code = response["code"] ?? 500;
-    final String message = response["message"] ?? "Something went wrong";
-
-    if (success && code == 200) {
-      showSnackMessage(context, message);
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ResetPasswordScreen(email: widget.email,otp: otp ),
-        ),
-      );
-    } else {
-      setState(() => isOtpInvalid = true);
-      _showErrorDialog(message);
-    }
-  }
-
-  Future<void> _handleResendOtp() async {
-    if (!canResend) return;
-
-    final response = await ResendOtpService.resendOtp(
-      email: widget.email,
-      type: "forgot",
-    );
-
-    if (!mounted) return;
-
-    if (response["code"] == 200) {
-      showSnackMessage(context, response["message"]);
-      pinController.clear();
-      setState(() => isOtpInvalid = false);
-      _startTimer();
-    } else {
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Resend Failed"),
-          content: Text(response["message"] ?? "Something went wrong."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Okay"),
-            ),
-          ],
-        ),
-      );
-    }
-  }
+  //   if (response["code"] == 200) {
+  //     showSnackMessage(context, response["message"]);
+  //     pinController.clear();
+  //     setState(() => isOtpInvalid = false);
+  //     _startTimer();
+  //   } else {
+  //     showDialog(
+  //       context: context,
+  //       builder: (_) => AlertDialog(
+  //         title: const Text("Resend Failed"),
+  //         content: Text(response["message"] ?? "Something went wrong."),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () => Navigator.pop(context),
+  //             child: const Text("Okay"),
+  //           ),
+  //         ],
+  //       ),
+  //     );
+  //   }
+  // }
 
 
   @override
@@ -271,7 +269,8 @@ class _VerifyForgotPasswordOtpScreenState
                 width: double.infinity,
                 height: 50,
                 child: CustomButton(
-                  onPressed: isLoading ? null : _handleVerifyOtp,
+                  // onPressed: isLoading ? null : _handleVerifyOtp,
+                  onPressed: (){},
                   text: isLoading ? "Verifying Code..." : "Verify Code",
                   backgroundColor: isLoading ?cs.onSurfaceVariant  : cs.primary ,
                 ),
@@ -286,7 +285,7 @@ class _VerifyForgotPasswordOtpScreenState
                     return TextButton(
                       onPressed: canResend ? ()
                       {
-                        _handleResendOtp();
+                        // _handleResendOtp();
                       } : null,
                       child: Text(
                         canResend

@@ -47,44 +47,45 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Future<void> _handleVerifyEmail() async {
-    final email = emailController.text.trim();
-
-    final error = FormValidators.validateEmail(email);
-    if (error != null) {
-      _showErrorDialog(error);
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    final response =
-    await VerifyForgetPasswordEmailService.verifyEmail(email);
-
-    if (!mounted) return;
-    setState(() => isLoading = false);
-
-    final bool success = response["success"] == true;
-    final int code = response["code"] ?? 500;
-    final String message =
-        response["message"] ?? "Something went wrong";
-
-    if (success && code == 200) {
-      showSnackMessage(context, message);
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => VerifyForgotPasswordOtpScreen(
-            email: email,
-          ),
-        ),
-      );
-    } else {
-      _showErrorDialog(message);
-    }
-  }
-
+  // Future<void> _handleVerifyEmail() async {
+  //   final email = emailController.text.trim();
+  //
+  //   final error = FormValidators.validateEmail(email);
+  //   if (error != null) {
+  //     _showErrorDialog(error);
+  //     return;
+  
+  //   }
+  //
+  //   setState(() => isLoading = true);
+  //
+  //   final response =
+  //   await VerifyForgetPasswordEmailService.verifyEmail(email);
+  //
+  //   if (!mounted) return;
+  //   setState(() => isLoading = false);
+  //
+  //   final bool success = response["success"] == true;
+  //   final int code = response["code"] ?? 500;
+  //   final String message =
+  //       response["message"] ?? "Something went wrong";
+  //
+  //   if (success && code == 200) {
+  //     showSnackMessage(context, message);
+  //
+  //     Navigator.push(
+  //       context,
+  //       MaterialPageRoute(
+  //         builder: (_) => VerifyForgotPasswordOtpScreen(
+  //           email: email,
+  //         ),
+  //       ),
+  //     );
+  //   } else {
+  //     _showErrorDialog(message);
+  //   }
+  // }
+  //
 
   @override
   void dispose() {
@@ -156,7 +157,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   onPressed: ()
                   {
                     if (_formKey.currentState!.validate()) {
-                         _handleVerifyEmail();
+                         // _handleVerifyEmail();
                     }
                   },
                   text: isLoading ? "Verifying Email..." : "Verify Email",

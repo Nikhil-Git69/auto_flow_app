@@ -1,5 +1,7 @@
 import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
+import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,15 +14,31 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    _checkAuth();
+  }
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
+  Future<void> _checkAuth() async {
+    // Artificial delay for splash effect
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (!mounted) return;
 
+    const storage = FlutterSecureStorage();
+    final token = await storage.read(key: 'authToken');
+
+    if (!mounted) return;
+
+    if (token != null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const NavBarScreen()),
+      );
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
-    });
+    }
   }
 
   @override

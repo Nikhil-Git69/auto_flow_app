@@ -1,89 +1,156 @@
 class AnalysisModel {
-    AnalysisModel({
-        required this.httpStatus,
-        required this.message,
-        required this.code,
-        required this.data,
-        required this.timestamp,
-        required this.asyncRequest,
-    });
+  final String? analysisId;
+  final String fileName;
+  final String? fileType;
+  final String? uploadDate;
+  final int totalScore;
+  final List<AnalysisIssue> issues;
+  final String summary;
+  final String? formatType;
+  final String? processedContent;
+  final String? correctedContent;
+  final String? correctedPdfBase64;
+  final String? status;
+  final String? userId;
 
-    final String httpStatus;
-    final String message;
-    final int code;
-    final AnalysisData? data;
-    final String timestamp;
-    final bool asyncRequest;
+  AnalysisModel({
+    this.analysisId,
+    required this.fileName,
+    this.fileType,
+    this.uploadDate,
+    required this.totalScore,
+    required this.issues,
+    required this.summary,
+    this.formatType,
+    this.processedContent,
+    this.correctedContent,
+    this.correctedPdfBase64,
+    this.status,
+    this.userId,
+  });
 
-    factory AnalysisModel.fromJson(Map<String, dynamic> json) {
-        return AnalysisModel(
-            httpStatus: json["httpStatus"] ?? "",
-            message: json["message"] ?? "",
-            code: json["code"] ?? 0,
-            data: json["data"] == null
-                ? null
-                : AnalysisData.fromJson(json["data"]),
-            timestamp: json["timestamp"] ?? "",
-            asyncRequest: json["asyncRequest"] ?? false,
-        );
-    }
+  factory AnalysisModel.fromJson(Map<String, dynamic> json) {
+    return AnalysisModel(
+      analysisId: json['analysisId'] ?? json['_id'],
+      fileName: json['fileName'] ?? '',
+      fileType: json['fileType'],
+      uploadDate: json['uploadDate'] ?? json['analyzedAt'],
+      totalScore: json['totalScore'] ?? 0,
+      issues:
+          (json['issues'] as List?)
+              ?.map((e) => AnalysisIssue.fromJson(e))
+              .toList() ??
+          [],
+      summary: json['summary'] ?? '',
+      formatType: json['formatType'],
+      processedContent: json['processedContent'],
+      correctedContent: json['correctedContent'],
+      correctedPdfBase64: json['correctedPdfBase64'],
+      status: json['status'],
+      userId: json['userId'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'analysisId': analysisId,
+      'fileName': fileName,
+      'fileType': fileType,
+      'uploadDate': uploadDate,
+      'totalScore': totalScore,
+      'issues': issues.map((e) => e.toJson()).toList(),
+      'summary': summary,
+      'formatType': formatType,
+      'processedContent': processedContent,
+      'correctedContent': correctedContent,
+      'correctedPdfBase64': correctedPdfBase64,
+      'status': status,
+      'userId': userId,
+    };
+  }
 }
 
-class AnalysisData {
-    AnalysisData({
-        required this.file,
-        required this.formatFeedback,
-        required this.contentFeedback,
-    });
-    final FileInfo file;
-    final FormatFeedback formatFeedback;
-    final List<String> contentFeedback;
+class AnalysisIssue {
+  final String? id;
+  final String type;
+  final String severity;
+  final String description;
+  final String? suggestion;
+  final String? originalText;
+  final String? correctedText;
+  final IssuePosition? position;
+  final bool isFixed;
+  final bool customFormatIssue;
 
-    factory AnalysisData.fromJson(Map<String, dynamic> json) {
-        return AnalysisData(
-            file: FileInfo.fromJson(json["file"]),
-            formatFeedback: FormatFeedback.fromJson(json["format_feedback"]),
-            contentFeedback: json["content_feedback"] == null
-                ? []
-                : List<String>.from(json["content_feedback"]),
-        );
-    }
+  AnalysisIssue({
+    this.id,
+    required this.type,
+    required this.severity,
+    required this.description,
+    this.suggestion,
+    this.originalText,
+    this.correctedText,
+    this.position,
+    this.isFixed = false,
+    this.customFormatIssue = false,
+  });
+
+  factory AnalysisIssue.fromJson(Map<String, dynamic> json) {
+    return AnalysisIssue(
+      id: json['id'],
+      type: json['type'] ?? 'Unknown',
+      severity: json['severity'] ?? 'Minor',
+      description: json['description'] ?? '',
+      suggestion: json['suggestion'],
+      originalText: json['originalText'],
+      correctedText: json['correctedText'],
+      position: json['position'] != null
+          ? IssuePosition.fromJson(json['position'])
+          : null,
+      isFixed: json['isFixed'] ?? false,
+      customFormatIssue: json['customFormatIssue'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': type,
+      'severity': severity,
+      'description': description,
+      'suggestion': suggestion,
+      'originalText': originalText,
+      'correctedText': correctedText,
+      'position': position?.toJson(),
+      'isFixed': isFixed,
+      'customFormatIssue': customFormatIssue,
+    };
+  }
 }
-class FileInfo {
-    final String name;
-    final String type;
 
-    FileInfo({
-        required this.name,
-        required this.type,
-    });
+class IssuePosition {
+  final double top;
+  final double left;
+  final double width;
+  final double height;
 
-    factory FileInfo.fromJson(Map<String, dynamic> json) {
-        return FileInfo(
-            name: json["name"] ?? "",
-            type: json["type"] ?? "",
-        );
-    }
-}
+  IssuePosition({
+    required this.top,
+    required this.left,
+    required this.width,
+    required this.height,
+  });
 
-class FormatFeedback {
-    FormatFeedback({
-        required this.issues,
-        required this.status,
-        required this.analysisMessage,
-    });
+  factory IssuePosition.fromJson(Map<String, dynamic> json) {
+    return IssuePosition(
+      top: (json['top'] as num).toDouble(),
+      left: (json['left'] as num).toDouble(),
+      width: (json['width'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+    );
+  }
 
-    final List<String> issues;
-    final String status;
-    final String analysisMessage;
-
-    factory FormatFeedback.fromJson(Map<String, dynamic> json) {
-        return FormatFeedback(
-            issues: json["issues"] == null
-                ? []
-                : List<String>.from(json["issues"]),
-            status: json["status"] ?? "",
-            analysisMessage: json["analysis_message"] ?? "",
-        );
-    }
+  Map<String, dynamic> toJson() {
+    return {'top': top, 'left': left, 'width': width, 'height': height};
+  }
 }

@@ -1,41 +1,80 @@
 import 'dart:convert';
 import 'dart:developer';
-import 'package:auto_flow/models/api_models/signup_model.dart';
-import 'package:http/http.dart' as http;
 import 'package:auto_flow/constants/api_urls.dart';
-
+import 'package:auto_flow/core/api/api_client.dart';
+import 'package:auto_flow/models/api_models/login_response_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SignupService {
-  static Future<SignupModel> signup({
+  static const _storage = FlutterSecureStorage();
+
+  static Future<Map<String, dynamic>> signup({
     required String name,
     required String email,
     required String password,
+    String collegeName = "Default College", // Default as per frontend behavior
+    String role = "student", // Default role
   }) async {
+    log("SignupService: Attempting signup for $email");
+    log(
+      "SignupService: Payload -> Name: $name, College: $collegeName, Role: $role",
+    );
+
     try {
-      final response = await http.post(
-        Uri.parse(ApiUrl.signup),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          "name": name,
-          "email": email,
-          "password": password,
-        }),
-      );
+      final response = await ApiClient.post(ApiUrl.signup, {
+        "name": name,
+        "email": email,
+        "password": password,
+        "collegeName": collegeName,
+        "role": role,
+      });
 
-      log("Signup Status: ${response.statusCode}");
-      log("Signup Body: ${response.body}");
+      log("SignupService: API Response received: $response");
 
-      final Map<String, dynamic> json = jsonDecode(response.body);
-      final model = SignupModel.fromJson(json);
+      if (response['success'] == true) {
+        try {
+          final loginResponse = LoginResponseModel.fromJson(response['data']);
 
+          if (loginResponse.success && loginResponse.data != null) {
+            log("SignupService: Signup successful, tokens received.");
+            // Store token
+            await _storage.write(
+              key: 'authToken',
+              value: loginResponse.data!.token,
+            );
 
-      return model;
+            // Store user data
+            await _storage.write(
+              key: 'userData',
+              value: jsonEncode(loginResponse.data!.user.toJson()),
+            );
 
+            return {"success": true, "data": loginResponse.data};
+          } else {
+            log(
+              "SignupService: LoginResponse indicates failure: ${loginResponse.message}",
+            );
+            return {"success": false, "message": loginResponse.message};
+          }
+        } catch (e) {
+          log("SignupService: Error parsing response: $e");
+          return {
+            "success": false,
+            "message": "Failed to process signup response: $e",
+          };
+        }
+      } else {
+        log(
+          "SignupService: API returned success=false. Message: ${response['message']}",
+        );
+        return {
+          "success": false,
+          "message": response['message'] ?? "Signup failed",
+        };
+      }
     } catch (e) {
-      throw Exception("Signup failed: $e");
+      log("SignupService: Exception during signup: $e");
+      return {"success": false, "message": "Connection error: $e"};
     }
   }
 }

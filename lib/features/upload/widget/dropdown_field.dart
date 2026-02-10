@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 class DropdownField extends StatelessWidget {
   final String label;
   final String value;
@@ -26,9 +27,7 @@ class DropdownField extends StatelessWidget {
           DropdownButtonFormField<String>(
             value: value,
             items: items
-                .map(
-                  (e) => DropdownMenuItem(value: e, child: Text(e)),
-            )
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                 .toList(),
             onChanged: (v) => onChanged(v!),
             decoration: InputDecoration(

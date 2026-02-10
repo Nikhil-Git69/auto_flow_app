@@ -2,6 +2,7 @@ import 'package:auto_flow/features/home/screen/home_screen.dart';
 import 'package:auto_flow/features/history/screen/history_screen.dart';
 import 'package:auto_flow/features/settings/screen/settings_screen.dart';
 import 'package:auto_flow/features/upload/screen/upload_screen.dart';
+import 'package:auto_flow/features/workspace/screen/workspace_screen.dart';
 import 'package:flutter/material.dart';
 
 class NavBarScreen extends StatefulWidget {
@@ -16,8 +17,8 @@ class _NavBarScreenState extends State<NavBarScreen> {
 
   final List<Widget> _pages = [
     HomeScreen(),
-    HistoryScreen(),
     UploadScreen(),
+    WorkspaceScreen(),
     SettingsScreen(),
   ];
 
@@ -41,19 +42,13 @@ class _NavBarScreenState extends State<NavBarScreen> {
         unselectedItemColor: colorScheme.onSurface.withValues(alpha: 0.6),
         onTap: _onNavPageTapped,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: "Home",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+
+          BottomNavigationBarItem(icon: Icon(Icons.upload), label: "Upload"),
 
           BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: "History",
-          ),
-
-          BottomNavigationBarItem(
-            icon: Icon(Icons.upload),
-            label: "Upload",
+            icon: Icon(Icons.workspaces),
+            label: "Workspace",
           ),
 
           BottomNavigationBarItem(

@@ -19,36 +19,40 @@ class LoginService {
     if (response['success'] == true) {
       try {
         final loginResponse = LoginResponseModel.fromJson(response['data']);
-        
+
         if (loginResponse.success && loginResponse.data != null) {
           //  token
-          await _storage.write(key: 'authToken', value: loginResponse.data!.token);
-          
           await _storage.write(
-            key: 'userData', 
-            value: jsonEncode(loginResponse.data!.user.toJson())
+            key: 'authToken',
+            value: loginResponse.data!.token,
           );
 
-          return {
-            "success": true,
-            "data": loginResponse.data
-          };
+          await _storage.write(
+            key: 'userData',
+            value: jsonEncode(loginResponse.data!.user.toJson()),
+          );
+
+          if (loginResponse.data!.user.id != null) {
+            await _storage.write(
+              key: 'userId',
+              value: loginResponse.data!.user.id,
+            );
+          }
+
+          return {"success": true, "data": loginResponse.data};
         } else {
-           return {
-            "success": false,
-            "message": loginResponse.message
-          };
+          return {"success": false, "message": loginResponse.message};
         }
       } catch (e) {
         return {
           "success": false,
-          "message": "Failed to process login response"
+          "message": "Failed to process login response",
         };
       }
     } else {
       return {
         "success": false,
-        "message": response['message'] ?? "Login failed"
+        "message": response['message'] ?? "Login failed",
       };
     }
   }

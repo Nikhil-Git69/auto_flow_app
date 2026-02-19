@@ -3,6 +3,7 @@ import 'package:auto_flow/features/history/widgets/score_badge.dart';
 import 'package:flutter/material.dart';
 
 enum FileType { pdf, word }
+
 enum ReviewStatus { good, warning, critical }
 
 class ReviewFileTile extends StatelessWidget {
@@ -12,6 +13,9 @@ class ReviewFileTile extends StatelessWidget {
   final FileType fileType;
   final ReviewStatus status;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final String? analysisType;
+  final VoidCallback? onUploadToWorkspace;
 
   const ReviewFileTile({
     super.key,
@@ -21,6 +25,9 @@ class ReviewFileTile extends StatelessWidget {
     required this.fileType,
     required this.status,
     required this.onTap,
+    this.onLongPress,
+    this.analysisType,
+    this.onUploadToWorkspace,
   });
 
   @override
@@ -30,6 +37,7 @@ class ReviewFileTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -60,19 +68,50 @@ class ReviewFileTile extends StatelessWidget {
 
                   const SizedBox(height: 4),
 
-                  Text(
-                    'Checked on ${_formatDate(submittedAt)}',
-                    style: theme.textTheme.bodyMedium,
+                  Row(
+                    children: [
+                      Text(
+                        'Checked on ${_formatDate(submittedAt)}',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      if (analysisType != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.primaryContainer.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            analysisType!.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: colors.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-
-
                 ],
               ),
             ),
 
+            // // Upload
+            // if (onUploadToWorkspace != null)
+            //   IconButton(
+            //     icon: const Icon(Icons.upload_file_outlined, size: 20),
+            //     tooltip: "Save to Workspace",
+            //     onPressed: onUploadToWorkspace,
+            //     color: colors.primary,
+            //   ),
+
             // Score
             ScoreBadge(score: score),
-
           ],
         ),
       ),

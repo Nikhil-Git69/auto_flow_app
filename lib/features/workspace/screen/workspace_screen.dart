@@ -166,6 +166,81 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     );
   }
 
+  void _showOptionsBottomSheet(WorkspaceModel ws) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                ws.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  "Delete Workspace",
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete(ws);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmDelete(WorkspaceModel ws) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Workspace?"),
+        content: Text(
+          "Are you sure you want to delete '${ws.name}'? This action cannot be undone.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+
+              final result = await WorkspaceService.deleteWorkspace(ws.id);
+
+              if (!mounted) return;
+              setState(() => _isLoading = false);
+
+              if (result['success'] == true) {
+                _showSnack("Workspace deleted");
+                _fetchWorkspaces();
+              } else {
+                _showSnack(result['message'] ?? "Failed to delete");
+              }
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -221,7 +296,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final ws = _workspaces[index];
-                return GestureDetector(
+                return InkWell(
                   onTap: () {
                     Navigator.push(
                       context,
@@ -230,6 +305,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                       ),
                     );
                   },
+                  onLongPress: () => _showOptionsBottomSheet(ws),
+                  borderRadius: BorderRadius.circular(16),
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

@@ -18,9 +18,11 @@ class ApiUrl {
   //Python FastAPI
   // static const String analysisUpload = "$fastUrl/api/v1/analysis/upload";
 
-  static const baseUrl = "http://192.168.18.148:5000";
+  // static const baseUrl = "http://192.168.18.148:5000";
 
-  //Auth APIs
+  // static const baseUrl = "http://192.168.0.6:5000";
+  static const baseUrl = "http://10.200.174.164:5000";
+
   static const String login = "$baseUrl/auth/login";
   static const String signup = "$baseUrl/auth/register";
   static const String me = "$baseUrl/auth/me";
@@ -29,4 +31,7 @@ class ApiUrl {
   static const String createWorkspace = "$baseUrl/workspace/create";
   static const String joinWorkspace = "$baseUrl/workspace/join";
 
+  // Comments
+  static const String comments = "$baseUrl/workspace/comments";
+  static const String deleteComment = "$baseUrl/workspace/comments";
 }

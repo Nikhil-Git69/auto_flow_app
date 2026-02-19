@@ -25,15 +25,15 @@ class CustomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final bool isDisabled = onPressed == null;
+    // final bool isDisabled = onPressed == null;
 
-    final Color effectiveBackgroundColor = isDisabled
-        ? colorScheme.onSurface.withValues(alpha: 0.3)
-        : backgroundColor ?? colorScheme.primary;
+    // final Color effectiveBackgroundColor = isDisabled
+    //     ? colorScheme.onSurface.withValues(alpha: 0.3)
+    //     : backgroundColor ?? colorScheme.primary;
 
-    final Color effectiveTextColor = isDisabled
-        ? colorScheme.onSurface.withValues(alpha: 0.6)
-        : textColor ?? colorScheme.onPrimary;
+    // final Color effectiveTextColor = isDisabled
+    //     ? colorScheme.onSurface.withValues(alpha: 0.6)
+    //     : textColor ?? colorScheme.onPrimary;
 
     return SizedBox(
       height: height ?? 50,

@@ -6,12 +6,16 @@ class AnalysisModel {
   final int totalScore;
   final List<AnalysisIssue> issues;
   final String summary;
-  final String? formatType;
-  final String? processedContent;
+  final String? formatType; // 'default', 'custom', 'concept'
+  final String? analysisType;
+  final String? processedContent; // HTML content for WBS
   final String? correctedContent;
   final String? correctedPdfBase64;
   final String? status;
   final String? userId;
+  final String? formatRequirements; // For Custom Analysis
+  final Map<String, dynamic>? metadata;
+  final List<CommentModel>? comments;
 
   AnalysisModel({
     this.analysisId,
@@ -22,11 +26,15 @@ class AnalysisModel {
     required this.issues,
     required this.summary,
     this.formatType,
+    this.analysisType,
     this.processedContent,
     this.correctedContent,
     this.correctedPdfBase64,
     this.status,
     this.userId,
+    this.formatRequirements,
+    this.metadata,
+    this.comments,
   });
 
   factory AnalysisModel.fromJson(Map<String, dynamic> json) {
@@ -43,11 +51,17 @@ class AnalysisModel {
           [],
       summary: json['summary'] ?? '',
       formatType: json['formatType'],
+      analysisType: json['analysisType'],
       processedContent: json['processedContent'],
       correctedContent: json['correctedContent'],
       correctedPdfBase64: json['correctedPdfBase64'],
       status: json['status'],
       userId: json['userId'],
+      formatRequirements: json['formatRequirements'],
+      metadata: json['metadata'],
+      comments: (json['comments'] as List?)
+          ?.map((e) => CommentModel.fromJson(e))
+          .toList(),
     );
   }
 
@@ -61,11 +75,17 @@ class AnalysisModel {
       'issues': issues.map((e) => e.toJson()).toList(),
       'summary': summary,
       'formatType': formatType,
+      'analysisType': analysisType,
       'processedContent': processedContent,
       'correctedContent': correctedContent,
       'correctedPdfBase64': correctedPdfBase64,
       'status': status,
       'userId': userId,
+      'formatRequirements': formatRequirements,
+      'metadata': metadata,
+      'comments': comments
+          ?.map((e) => e.toJson())
+          .toList(), // Add comments to toJson
     };
   }
 }
@@ -152,5 +172,53 @@ class IssuePosition {
 
   Map<String, dynamic> toJson() {
     return {'top': top, 'left': left, 'width': width, 'height': height};
+  }
+}
+
+class CommentModel {
+  final String id;
+  final String text;
+  final String userId;
+  final String userName;
+  final String role;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  CommentModel({
+    required this.id,
+    required this.text,
+    required this.userId,
+    required this.userName,
+    required this.role,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory CommentModel.fromJson(Map<String, dynamic> json) {
+    return CommentModel(
+      id: json['id'] ?? '',
+      text: json['text'] ?? '',
+      userId: json['userId'] ?? '',
+      userName: json['userName'] ?? 'Unknown',
+      role: json['role'] ?? 'Member',
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
+          : DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'text': text,
+      'userId': userId,
+      'userName': userName,
+      'role': role,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
   }
 }

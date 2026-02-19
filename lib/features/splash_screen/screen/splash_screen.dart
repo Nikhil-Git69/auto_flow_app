@@ -18,9 +18,8 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    // Artificial delay for splash effect
     await Future.delayed(const Duration(seconds: 2));
-    
+
     if (!mounted) return;
 
     const storage = FlutterSecureStorage();

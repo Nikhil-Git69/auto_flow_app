@@ -7,7 +7,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiClient {
   static const _storage = FlutterSecureStorage();
 
-  // Helper to get headers with token
   static Future<Map<String, String>> _getHeaders() async {
     String? token = await _storage.read(key: 'authToken');
     return {
@@ -51,6 +50,58 @@ class ApiClient {
 
       final response = await http
           .get(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 30));
+
+      return _handleResponse(response);
+    } on SocketException {
+      return {'success': false, 'message': 'No Internet Connection'};
+    } catch (e) {
+      log("API Error: $e");
+      return {
+        'success': false,
+        'message': 'Something went wrong. Please try again.',
+      };
+    }
+  }
+
+  // PUT Request
+  static Future<Map<String, dynamic>> put(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      log("PUT Request: $url");
+      log("Body: ${jsonEncode(body)}");
+
+      final response = await http
+          .put(Uri.parse(url), headers: headers, body: jsonEncode(body))
+          .timeout(const Duration(seconds: 30));
+
+      return _handleResponse(response);
+    } on SocketException {
+      return {'success': false, 'message': 'No Internet Connection'};
+    } catch (e) {
+      log("API Error: $e");
+      return {
+        'success': false,
+        'message': 'Something went wrong. Please try again.',
+      };
+    }
+  }
+
+  // PATCH Request
+  static Future<Map<String, dynamic>> patch(
+    String url,
+    Map<String, dynamic> body,
+  ) async {
+    try {
+      final headers = await _getHeaders();
+      log("PATCH Request: $url");
+      log("Body: ${jsonEncode(body)}");
+
+      final response = await http
+          .patch(Uri.parse(url), headers: headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 30));
 
       return _handleResponse(response);

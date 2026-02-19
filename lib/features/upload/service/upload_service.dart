@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:developer';
 import 'dart:convert';
 import 'package:auto_flow/constants/api_urls.dart';
-import 'package:auto_flow/models/api_models/upload_model.dart';
+import 'package:auto_flow/models/api_models/analysis_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';

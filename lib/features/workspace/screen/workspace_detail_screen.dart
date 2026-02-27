@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/features/detail/screen/detail_screen.dart';
-import 'package:auto_flow/features/upload/screen/concept_analysis_screen.dart';
-import 'package:auto_flow/features/upload/screen/custom_analysis_screen.dart';
+import 'package:auto_flow/features/detail/screen/report_analysis_screen.dart';
 import 'package:auto_flow/features/workspace/screen/comments_screen.dart';
+import 'package:auto_flow/features/workspace/widgets/workspace_members_section.dart';
+import 'package:auto_flow/features/workspace/widgets/workspace_reference_materials_tab.dart';
+import 'package:auto_flow/features/workspace/widgets/workspace_access_code_card.dart';
+import 'package:auto_flow/features/workspace/widgets/workspace_document_list.dart';
 import 'package:auto_flow/features/workspace/screen/project_timeline/project_timeline_screen.dart';
 import 'package:auto_flow/features/workspace/service/workspace_service.dart';
 import 'package:auto_flow/models/api_models/analysis_model.dart';
@@ -12,6 +15,11 @@ import 'package:auto_flow/models/api_models/workspace_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 
 class WorkspaceDetailScreen extends StatefulWidget {
   final WorkspaceModel workspace;
@@ -27,7 +35,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
   bool _showAllMembers = false;
   String? _currentUserId;
   int _selectedIndex = 0;
-  int _documentFilterIndex = 0;
   bool _isLoadingDetails = true;
 
   @override
@@ -35,7 +42,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     super.initState();
     _workspace = widget.workspace;
     _loadCurrentUser();
-    _refreshWorkspace(); 
+    _refreshWorkspace();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -60,7 +67,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     showSnackMessage("Access code copied to clipboard!");
   }
 
-  // --- Member Management ---
   Future<void> _removeMember(String memberId, String memberName) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -93,21 +99,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
               ?.where((m) => (m.id ?? m.studentId) != memberId)
               .toList();
 
-          _workspace = _workspace.copyWith(
-            members: updatedMembers,
-          ); // Assuming copyWith or manual update
-          // Manual update if copyWith doesn't exist
-          _workspace = WorkspaceModel(
-            id: _workspace.id,
-            name: _workspace.name,
-            description: _workspace.description,
-            accessCode: _workspace.accessCode,
-            ownerId: _workspace.ownerId,
-            memberIds: _workspace.memberIds,
-            documents: _workspace.documents,
-            createdAt: _workspace.createdAt,
-            members: updatedMembers,
-          );
+          _workspace = _workspace.copyWith(members: updatedMembers);
         });
         if (mounted) {
           showSnackMessage("$memberName removed successfully");
@@ -120,13 +112,34 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
-  // --- Document Management ---
-  void _showDocumentOptions(AnalysisModel doc) {
-    final isWorkspaceOwner = _currentUserId == _workspace.ownerId;
-    final isDocumentOwner = doc.userId == _currentUserId;
+  Future<void> _promoteMember(String memberId, String memberName) async {
+    final result = await WorkspaceService.promoteToCoAdmin(
+      _workspace.id,
+      memberId,
+    );
+    if (result['success'] == true) {
+      showSnackMessage("$memberName promoted to Co-Admin");
+      _refreshWorkspace();
+    } else {
+      showSnackMessage(result['message'] ?? "Failed to promote");
+    }
+  }
 
-    // Always show if user can view comments (everyone in workspace)
-    // differentiating actions inside
+  Future<void> _demoteMember(String memberId, String memberName) async {
+    final result = await WorkspaceService.demoteToMember(
+      _workspace.id,
+      memberId,
+    );
+    if (result['success'] == true) {
+      showSnackMessage("$memberName demoted to Member");
+      _refreshWorkspace();
+    } else {
+      showSnackMessage(result['message'] ?? "Failed to demote");
+    }
+  }
+
+  void _showDocumentOptions(AnalysisModel doc) {
+    final isDocumentOwner = doc.userId == _currentUserId;
 
     showModalBottomSheet(
       context: context,
@@ -151,7 +164,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                     _showComments(doc);
                   },
                 ),
-                if (isWorkspaceOwner)
+                if (_isAdmin)
                   ListTile(
                     leading: const Icon(
                       Icons.check_circle_outline,
@@ -163,7 +176,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
                       _showStatusSelection(doc);
                     },
                   ),
-                if (isWorkspaceOwner || isDocumentOwner)
+                if (_isOwner || isDocumentOwner)
                   ListTile(
                     leading: const Icon(Icons.delete, color: Colors.red),
                     title: const Text(
@@ -246,7 +259,6 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       // Update local state directly — no refresh needed
       final updatedDocs = (_workspace.documents ?? []).map((d) {
         if (d.analysisId == doc.analysisId) {
-          // Recreate with updated status using toJson/fromJson
           final json = d.toJson();
           json['status'] = status;
           return AnalysisModel.fromJson(json);
@@ -336,248 +348,39 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
     }
   }
 
+  // ─── Role helpers (mirrors WorkspaceDetailView.tsx lines 87-90) ───────────
+  bool get _isOwner =>
+      _currentUserId != null && _currentUserId == _workspace.ownerId;
+  bool get _isCoAdmin =>
+      _currentUserId != null &&
+      (_workspace.coAdmins?.contains(_currentUserId) ?? false);
+  bool get _isAdmin => _isOwner || _isCoAdmin;
+
   List<AnalysisModel> get _filteredDocuments {
     final allDocs = _workspace.documents ?? [];
-    if (_documentFilterIndex == 0) return allDocs;
-    if (_documentFilterIndex == 1)
-      return allDocs.where((d) => d.formatType == 'concept').toList();
-    if (_documentFilterIndex == 2)
-      return allDocs.where((d) => d.formatType == 'custom').toList();
-    return allDocs
-        .where((d) => d.formatType == 'default' || d.formatType == null)
-        .toList();
+
+    // Document visibility: owners see everything, co-admins and members
+    // see only their own documents — matches React filter at line 95.
+    return allDocs.where((doc) {
+      if (_isOwner) return true;
+      return doc.userId != null && doc.userId == _currentUserId;
+    }).toList();
   }
 
   Widget _buildMembersSection(BuildContext context, ColorScheme colorScheme) {
-    final members = _workspace.members ?? [];
-    final isOwner = _currentUserId == _workspace.ownerId;
-
-    // Check if members have real names (not placeholder 'Member')
-    final hasMemberNames =
-        members.isEmpty || members.any((m) => m.name != 'Member');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "WORKSPACE MEMBERS (${members.length})",
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-                letterSpacing: 1.2,
-              ),
-            ),
-            if (isOwner && members.isNotEmpty)
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _showAllMembers = !_showAllMembers;
-                  });
-                },
-                child: Text(
-                  _showAllMembers ? "Show Less" : "Manage Members",
-                  style: TextStyle(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (_isLoadingDetails && !hasMemberNames)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          )
-        else if (!_showAllMembers)
-          // Compact View
-          Row(
-            children: [
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: members.length > 8 ? 8 : members.length,
-                  itemBuilder: (context, index) {
-                    final member = members[index];
-                    return Align(
-                      widthFactor: 0.8,
-                      child: Tooltip(
-                        message: member.name,
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: colorScheme.primary,
-                          child: Text(
-                            member.name.substring(0, 2).toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (members.length > 8)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: Text(
-                    "+${members.length - 8} more",
-                    style: TextStyle(
-                      color: colorScheme.outline,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          )
-        else
-          // Expanded View
-          Container(
-            decoration: BoxDecoration(
-              color: colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outlineVariant),
-            ),
-            constraints: const BoxConstraints(maxHeight: 300),
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(8),
-              itemCount: members.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final member = members[index];
-                final memberId = member.id ?? member.studentId ?? '';
-                final isMe = memberId == _currentUserId;
-                final isAdmin = memberId == _workspace.ownerId;
-
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: colorScheme.primaryContainer,
-                    child: Text(
-                      member.name.substring(0, 2).toUpperCase(),
-                      style: TextStyle(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          member.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      if (isMe)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "You",
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      if (isAdmin)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            "Admin",
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.amber.shade800,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  subtitle: Text(member.email),
-                  trailing: (isOwner && !isMe)
-                      ? IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => _removeMember(memberId, member.name),
-                        )
-                      : null,
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFilterTab(String label, int index) {
-    final isSelected = _documentFilterIndex == index;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return GestureDetector(
-      onTap: () {
+    return WorkspaceMembersSection(
+      workspace: _workspace,
+      currentUserId: _currentUserId,
+      isLoadingDetails: _isLoadingDetails,
+      showAllMembers: _showAllMembers,
+      onToggleShowAll: () {
         setState(() {
-          _documentFilterIndex = index;
+          _showAllMembers = !_showAllMembers;
         });
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primary
-              : colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected
-                  ? colorScheme.onPrimary
-                  : colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ),
+      onPromote: _promoteMember,
+      onDemote: _demoteMember,
+      onRemove: _removeMember,
     );
   }
 
@@ -586,65 +389,93 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
       onRefresh: _refreshWorkspace,
       child: SingleChildScrollView(
         padding: AppPaddings.all16,
-        physics:
-            const AlwaysScrollableScrollPhysics(), // Ensure scrollable for refresh
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header Info
-            if (_workspace.description != null)
+            if (_workspace.description != null) ...[
               Text(
                 _workspace.description!,
                 style: AppTextStyles.smallHeader(context).copyWith(
                   color: colorScheme.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
+                  height: 1.5,
                 ),
               ),
+              const SizedBox(height: 20),
+            ] else ...[
+              const SizedBox(height: 8),
+            ],
+
+            // Role chip (mirrors WorkspaceDetailView.tsx line 126)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _isOwner
+                      ? Colors.amber.shade50
+                      : _isCoAdmin
+                      ? Colors.blue.shade50
+                      : colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: _isOwner
+                        ? Colors.amber.shade200
+                        : _isCoAdmin
+                        ? Colors.blue.shade200
+                        : colorScheme.outlineVariant,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isOwner
+                          ? Icons.admin_panel_settings
+                          : _isCoAdmin
+                          ? Icons.security
+                          : Icons.person_outline,
+                      size: 16,
+                      color: _isOwner
+                          ? Colors.amber.shade800
+                          : _isCoAdmin
+                          ? Colors.blue.shade800
+                          : colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Role: ${_isOwner
+                          ? 'Admin'
+                          : _isCoAdmin
+                          ? 'Co-Admin'
+                          : 'Member'}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _isOwner
+                            ? Colors.amber.shade800
+                            : _isCoAdmin
+                            ? Colors.blue.shade800
+                            : colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
             const SizedBox(height: 24),
 
             // Access Code Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.vpn_key, color: colorScheme.onSecondaryContainer),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "ACCESS CODE",
-                          style: TextStyle(
-                            color: colorScheme.onSecondaryContainer,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          _workspace.accessCode,
-                          style: TextStyle(
-                            color: colorScheme.onSecondaryContainer,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy),
-                    onPressed: _copyAccessCode,
-                    color: colorScheme.onSecondaryContainer,
-                  ),
-                ],
-              ),
+            WorkspaceAccessCodeCard(
+              workspace: _workspace,
+              isOwner: _isOwner,
+              onCopyAccessCode: _copyAccessCode,
             ),
 
             const SizedBox(height: 32),
@@ -654,187 +485,115 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
 
             const SizedBox(height: 32),
 
-            // Documents Section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Documents", style: AppTextStyles.subMidHeader(context)),
-                Text(
-                  "${_workspace.documents?.length ?? 0} Total",
-                  style: TextStyle(color: colorScheme.outline, fontSize: 12),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Filter Tabs
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  _buildFilterTab("All", 0),
-                  const SizedBox(width: 8),
-                  _buildFilterTab("Concept", 1),
-                  const SizedBox(width: 8),
-                  _buildFilterTab("Custom", 2),
-                  const SizedBox(width: 8),
-                  _buildFilterTab("Default", 3),
-                ],
-              ),
-            ),
-
-            if (_filteredDocuments.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Text(
-                    "No documents found.",
-                    style: TextStyle(color: colorScheme.outline),
-                  ),
-                ),
-              )
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _filteredDocuments.length,
-                itemBuilder: (context, index) {
-                  final doc = _filteredDocuments[index];
-                  return Card(
-                    elevation: 0,
-                    color: colorScheme.surfaceContainerLow,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: colorScheme.outlineVariant),
-                    ),
-                    child: InkWell(
-                      onLongPress: () => _showDocumentOptions(doc),
-                      borderRadius: BorderRadius.circular(12),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: doc.formatType == 'concept'
-                              ? Colors.indigo.shade100
-                              : doc.formatType == 'custom'
-                              ? Colors.amber.shade100
-                              : colorScheme.primaryContainer,
-                          child: Icon(
-                            doc.formatType == 'concept'
-                                ? Icons.schema
-                                : doc.formatType == 'custom'
-                                ? Icons.rule
-                                : Icons.description,
-                            color: doc.formatType == 'concept'
-                                ? Colors.indigo
-                                : doc.formatType == 'custom'
-                                ? Colors.amber.shade900
-                                : colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                        title: Text(
-                          doc.fileName,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Score: ${doc.totalScore}/100",
-                                  style: TextStyle(
-                                    color: doc.totalScore > 70
-                                        ? Colors.green
-                                        : Colors.orange,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                if (doc.status != null)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 8.0),
-                                    child: Text(
-                                      "• ${doc.status}",
-                                      style: TextStyle(
-                                        color: colorScheme.outline,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            if (doc.formatType != null &&
-                                doc.formatType != 'default')
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: doc.formatType == 'concept'
-                                        ? Colors.indigo.shade50
-                                        : Colors.amber.shade50,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: doc.formatType == 'concept'
-                                          ? Colors.indigo.shade200
-                                          : Colors.amber.shade200,
-                                      width: 0.5,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    doc.formatType!.toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: doc.formatType == 'concept'
-                                          ? Colors.indigo
-                                          : Colors.amber.shade900,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          if (doc.formatType == 'concept') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    ConceptAnalysisScreen(analysis: doc),
-                              ),
-                            );
-                          } else if (doc.formatType == 'custom') {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    CustomAnalysisScreen(analysis: doc),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DetailScreen(analysis: doc),
-                              ),
-                            );
-                          }
-                        },
-                      ),
+            // Document list
+            WorkspaceDocumentList(
+              filteredDocuments: _filteredDocuments,
+              onDocumentLongPress: _showDocumentOptions,
+              onDocumentTap: (doc) {
+                if (doc.formatType == 'report') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ReportAnalysisScreen(analysis: doc),
                     ),
                   );
-                },
-              ),
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DetailScreen(analysis: doc),
+                    ),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildReferenceMaterialsTab(
+    BuildContext context,
+    ColorScheme colorScheme,
+  ) {
+    return WorkspaceReferenceMaterialsTab(
+      workspace: _workspace,
+      currentUserId: _currentUserId,
+      onRefresh: _refreshWorkspace,
+      onUploadAdminFile: _uploadAdminFile,
+      onDeleteAdminFile: _deleteAdminFile,
+      onDownloadAdminFile: _downloadAndOpenAdminFile,
+    );
+  }
+
+  Future<void> _uploadAdminFile() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.any);
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      final name = result.files.single.name;
+      setState(() {
+        _isLoadingDetails = true;
+      });
+
+      final uploadResult = await WorkspaceService.uploadAdminFile(
+        _workspace.id,
+        path,
+        name,
+      );
+      if (uploadResult['success'] == true) {
+        showSnackMessage("File uploaded");
+        _refreshWorkspace();
+      } else {
+        setState(() {
+          _isLoadingDetails = false;
+        });
+        showSnackMessage(uploadResult['message'] ?? "Upload failed");
+      }
+    }
+  }
+
+  Future<void> _deleteAdminFile(String uploadId) async {
+    setState(() {
+      _isLoadingDetails = true;
+    });
+    final result = await WorkspaceService.deleteAdminFile(
+      _workspace.id,
+      uploadId,
+    );
+    if (result['success'] == true) {
+      showSnackMessage("File deleted");
+      _refreshWorkspace();
+    } else {
+      setState(() {
+        _isLoadingDetails = false;
+      });
+      showSnackMessage(result['message'] ?? "Failed to delete file");
+    }
+  }
+
+  Future<void> _downloadAndOpenAdminFile(
+    String uploadId,
+    String fileName,
+  ) async {
+    showSnackMessage("Downloading $fileName...");
+    try {
+      final url = await WorkspaceService.getAdminFileDownloadUrl(
+        _workspace.id,
+        uploadId,
+      );
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsBytes(response.bodyBytes);
+        await OpenFilex.open(file.path);
+      } else {
+        showSnackMessage("Failed to download file from URL.");
+      }
+    } catch (e) {
+      showSnackMessage("Error opening file: $e");
+    }
   }
 
   @override
@@ -860,6 +619,7 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
         index: _selectedIndex,
         children: [
           _buildDashboard(context, colorScheme),
+          _buildReferenceMaterialsTab(context, colorScheme),
           TimelineScreen(workspaceId: _workspace.id),
         ],
       ),
@@ -871,6 +631,11 @@ class _WorkspaceDetailScreenState extends State<WorkspaceDetailScreen> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.library_books_outlined),
+            selectedIcon: Icon(Icons.library_books),
+            label: 'Reference',
           ),
           NavigationDestination(
             icon: Icon(Icons.timeline_outlined),

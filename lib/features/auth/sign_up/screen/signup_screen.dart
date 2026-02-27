@@ -1,15 +1,12 @@
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/core/helper/form_validation.dart';
 import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
+import 'package:auto_flow/features/auth/sign_up/screen/verify_email_screen.dart';
 import 'package:auto_flow/features/auth/sign_up/service/signup_service.dart';
 import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
-
-// ... imports ...
-
-// ... imports ...
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -47,13 +44,34 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() => isLoading = false);
 
     if (response['success'] == true) {
+      // New flow: backend requires email verification
+      if (response['requiresVerification'] == true) {
+        final verifyEmail =
+            response['email'] as String? ?? emailController.text.trim();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerifyEmailScreen(
+              email: verifyEmail,
+              onVerified: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => NavBarScreen()),
+                (_) => false,
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+
+      // Legacy: token returned directly
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Account Created Successfully"),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
-      // Navigate to Home directly
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => NavBarScreen()),

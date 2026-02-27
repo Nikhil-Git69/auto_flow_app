@@ -142,24 +142,18 @@ class _TimelineScreenState extends State<TimelineScreen> {
     String userId,
     String newStatus,
   ) async {
-    // Safety check: If not owner, can only update self
     if (!_isOwner && userId != _currentUserId) return;
 
     setState(() => _isLoading = true);
 
-    // 1. Get current list or empty
     List<MemberStatus> currentStatuses = activity.memberStatuses ?? [];
 
-    // 2. Remove the entry for this user if it exists (we will replace it)
-    //    We create a new list to avoid mutating the original immutable model list directly if strictly typed
     List<Map<String, dynamic>> updatedList = currentStatuses
         .map((s) => s.toJson())
         .toList();
 
-    // Remove existing entry for this userId
     updatedList.removeWhere((s) => s['userId'] == userId);
 
-    // 3. Add the new status
     updatedList.add({
       'userId': userId,
       'status': newStatus,
@@ -576,7 +570,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
         ),
         body: TabBarView(
           children: [
-            // Tab 1: List / Cards
             ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: _activities.length + (_isOwner ? 1 : 0),
@@ -587,7 +580,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               },
             ),
 
-            // Tab 2: Gantt Chart
+            // Gantt Chart
             GanttChartView(
               activities: _activities,
               onActivityTap: (activity) {
@@ -608,8 +601,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   Widget _buildActivityCard(ActivityModel activity) {
-    // Determine status
-    // Check if I have a status entry in the list
     MemberStatus? myStatusObj;
     try {
       myStatusObj = activity.memberStatuses?.firstWhere(
@@ -628,7 +619,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
       else
         displayStatus = 'To Do';
     }
-    // If displayStatus is null, Dropdown will show "Set Status" hint
 
     return Card(
       elevation: 2,

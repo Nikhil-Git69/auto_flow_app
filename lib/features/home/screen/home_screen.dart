@@ -3,6 +3,8 @@ import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/features/home/widgets/profile_Header.dart';
 import 'package:auto_flow/features/home/widgets/section_card.dart';
 import 'package:auto_flow/features/home/widgets/tool_tiles.dart';
+import 'package:auto_flow/features/profile/screen/profile_screen.dart';
+import 'package:auto_flow/features/profile/service/profile_service.dart';
 import 'package:auto_flow/features/workspace/service/workspace_service.dart';
 import 'package:auto_flow/models/api_models/workspace_model.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +14,7 @@ import 'package:auto_flow/services/analysis_service.dart';
 import 'package:auto_flow/features/history/widgets/file_tiles.dart';
 import 'package:auto_flow/features/detail/screen/detail_screen.dart';
 import 'package:auto_flow/models/api_models/user_model.dart';
-import 'package:auto_flow/features/upload/screen/concept_analysis_screen.dart';
-import 'package:auto_flow/features/upload/screen/custom_analysis_screen.dart';
+import 'package:auto_flow/features/detail/screen/report_analysis_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 
@@ -39,11 +40,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _fetchUserData() async {
     try {
+      // 1. Show local data immediately (fast)
       final userDataStr = await _storage.read(key: 'userData');
-      if (userDataStr != null) {
+      if (userDataStr != null && mounted) {
         setState(() {
           user = UserModel.fromJson(jsonDecode(userDataStr));
         });
+      }
+
+      // 2. Refresh from backend in the background (gets fresh logoUrl/bannerUrl)
+      final userId = await _storage.read(key: 'userId');
+      if (userId != null) {
+        final result = await ProfileService.getProfile(userId);
+        if (result['success'] == true && mounted) {
+          final fresh = result['data'] as UserModel;
+          await ProfileService.saveUserLocally(fresh);
+          setState(() {
+            user = fresh;
+          });
+        }
       }
     } catch (e) {
       debugPrint("Error fetching user data: $e");
@@ -70,18 +85,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToAnalysis(AnalysisModel analysis) {
-    if (analysis.formatType == 'concept') {
+    if (analysis.formatType == 'report') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ConceptAnalysisScreen(analysis: analysis),
-        ),
-      );
-    } else if (analysis.formatType == 'custom') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CustomAnalysisScreen(analysis: analysis),
+          builder: (context) => ReportAnalysisScreen(analysis: analysis),
         ),
       );
     } else {
@@ -249,7 +257,8 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.workspace_premium_outlined),
-            onPressed: () {},
+            onPressed: () =>
+                _showProDialog(context, colorScheme, colorScheme.primary),
           ),
         ],
       ),
@@ -263,7 +272,17 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ProfileHeader(colorScheme: colorScheme, user: user),
+                GestureDetector(
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                    // Refresh user data when returning from profile
+                    _fetchUserData();
+                  },
+                  child: ProfileHeader(colorScheme: colorScheme, user: user),
+                ),
                 const SizedBox(height: 24),
                 SectionCard(
                   title: "Upload Limit",
@@ -288,9 +307,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         subtitle: "Upload and validate formatting",
                       ),
                       ToolTile(
-                        icon: Icons.swap_horiz_outlined,
-                        title: "Convertor",
-                        subtitle: "Convert documents",
+                        icon: Icons.workspaces,
+                        title: "Workspace",
+                        subtitle: "Collaborate efficiently",
                       ),
                       ToolTile(
                         icon: Icons.insights_outlined,
@@ -380,6 +399,141 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showProDialog(BuildContext context, ColorScheme cs, Color primary) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                colors: [primary, primary.withValues(alpha: 0.75)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium,
+                        color: Colors.amber,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Go Pro',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            'Unlock Your Full Potential',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _ProPerk(label: 'Unlimited workspaces'),
+                    _ProPerk(label: 'Priority AI analysis'),
+                    _ProPerk(label: 'Advanced analytics'),
+                    _ProPerk(label: 'Admin direct uploads'),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {}, // Pick plan
+                    child: const Text(
+                      'Upgrade to Pro',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+//Pro Perk Badge
+class _ProPerk extends StatelessWidget {
+  final String label;
+  const _ProPerk({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.bolt, color: Colors.amber, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 13),
+          ),
+        ],
       ),
     );
   }

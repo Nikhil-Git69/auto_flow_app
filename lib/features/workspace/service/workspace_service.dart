@@ -3,11 +3,14 @@ import 'dart:developer';
 import 'package:auto_flow/constants/api_urls.dart';
 import 'package:auto_flow/core/api/api_client.dart';
 import 'package:auto_flow/models/api_models/workspace_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 
 class WorkspaceService {
-  static Future<Map<String, dynamic>> getAllWorkspaces() async {
+  static Future<Map<String, dynamic>> getAllWorkspaces({bool? archived}) async {
     try {
-      final response = await ApiClient.get(ApiUrl.allWorkspaces);
+      final query = archived != null ? "?archived=$archived" : "";
+      final response = await ApiClient.get("${ApiUrl.allWorkspaces}$query");
 
       if (response['success'] == true && response['data'] != null) {
         final responseBody = response['data'];
@@ -30,12 +33,14 @@ class WorkspaceService {
 
   static Future<Map<String, dynamic>> createWorkspace(
     String name,
-    String description,
-  ) async {
+    String description, {
+    String category = 'General',
+  }) async {
     try {
       final response = await ApiClient.post(ApiUrl.createWorkspace, {
         'name': name,
         'description': description,
+        'category': category,
       });
 
       if (response['success'] == true && response['data'] != null) {
@@ -378,6 +383,192 @@ class WorkspaceService {
     } catch (e) {
       log("WorkspaceService: Error deleting task: $e");
       return {'success': false, 'message': 'Failed to delete task'};
+    }
+  }
+
+  // ── New APIs ────────────────────────────────────────────────────────────────
+
+  /// Archive a workspace  PATCH /workspace/:id/archive
+  static Future<Map<String, dynamic>> archiveWorkspace(String id) async {
+    try {
+      final response = await ApiClient.patch(
+        "${ApiUrl.baseUrl}/workspace/$id/archive",
+        {},
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Workspace archived'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error archiving workspace: $e");
+      return {'success': false, 'message': 'Failed to archive workspace'};
+    }
+  }
+
+  /// Unarchive a workspace  PATCH /workspace/:id/unarchive
+  static Future<Map<String, dynamic>> unarchiveWorkspace(String id) async {
+    try {
+      final response = await ApiClient.patch(
+        "${ApiUrl.baseUrl}/workspace/$id/unarchive",
+        {},
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Workspace unarchived'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error unarchiving workspace: $e");
+      return {'success': false, 'message': 'Failed to unarchive workspace'};
+    }
+  }
+
+  /// Promote member to co-admin  POST /workspace/:id/members/:memberId/promote
+  static Future<Map<String, dynamic>> promoteToCoAdmin(
+    String workspaceId,
+    String memberId,
+  ) async {
+    try {
+      final response = await ApiClient.post(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/members/$memberId/promote",
+        {},
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Member promoted to co-admin'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error promoting member: $e");
+      return {'success': false, 'message': 'Failed to promote member'};
+    }
+  }
+
+  /// Demote co-admin to member  POST /workspace/:id/members/:memberId/demote
+  static Future<Map<String, dynamic>> demoteToMember(
+    String workspaceId,
+    String memberId,
+  ) async {
+    try {
+      final response = await ApiClient.post(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/members/$memberId/demote",
+        {},
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Member demoted to member'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error demoting member: $e");
+      return {'success': false, 'message': 'Failed to demote member'};
+    }
+  }
+
+  /// Get task board data  GET /workspace/:id/board
+  static Future<Map<String, dynamic>> getBoard(String workspaceId) async {
+    try {
+      final response = await ApiClient.get(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/board",
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'data': response['data']};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error fetching board: $e");
+      return {'success': false, 'message': 'Failed to fetch board'};
+    }
+  }
+
+  /// Admin direct file upload  POST /workspace/:id/admin-upload  (multipart)
+  static Future<Map<String, dynamic>> uploadAdminFile(
+    String workspaceId,
+    String filePath,
+    String fileName,
+  ) async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'authToken');
+      if (token == null)
+        return {'success': false, 'message': 'Not authenticated'};
+
+      final uri = Uri.parse(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/admin-upload",
+      );
+      final request = http.MultipartRequest('POST', uri);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        await http.MultipartFile.fromPath('file', filePath, filename: fileName),
+      );
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data};
+      } else {
+        return {
+          'success': false,
+          'message': 'Admin upload failed (${response.statusCode})',
+        };
+      }
+    } catch (e) {
+      log("WorkspaceService: Error uploading admin file: $e");
+      return {'success': false, 'message': 'Connection error: $e'};
+    }
+  }
+
+  /// Delete admin upload  DELETE /workspace/:id/admin-upload/:uploadId
+  static Future<Map<String, dynamic>> deleteAdminFile(
+    String workspaceId,
+    String uploadId,
+  ) async {
+    try {
+      final response = await ApiClient.delete(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/admin-upload/$uploadId",
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Admin file deleted'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error deleting admin file: $e");
+      return {'success': false, 'message': 'Failed to delete admin file'};
+    }
+  }
+
+  /// Build download URL for an admin file (includes token as query param).
+  static Future<String> getAdminFileDownloadUrl(
+    String workspaceId,
+    String uploadId,
+  ) async {
+    const storage = FlutterSecureStorage();
+    final token = await storage.read(key: 'authToken');
+    final base =
+        "${ApiUrl.baseUrl}/workspace/$workspaceId/admin-upload/$uploadId/download";
+    return token != null ? "$base?token=${Uri.encodeComponent(token)}" : base;
+  }
+
+  /// Update workspace name/description  PATCH /workspace/:id
+  static Future<Map<String, dynamic>> updateWorkspace(
+    String workspaceId, {
+    String? name,
+    String? description,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+      };
+      final response = await ApiClient.patch(
+        "${ApiUrl.baseUrl}/workspace/$workspaceId",
+        body,
+      );
+      if (response['success'] == true) {
+        return {'success': true, 'message': 'Workspace updated'};
+      }
+      return response;
+    } catch (e) {
+      log("WorkspaceService: Error updating workspace: $e");
+      return {'success': false, 'message': 'Failed to update workspace'};
     }
   }
 }

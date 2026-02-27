@@ -2,10 +2,13 @@ import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/features/auth/login/screen/login_screen.dart';
+import 'package:auto_flow/features/auth/login/service/login_service.dart';
 import 'package:auto_flow/features/change_email/screen/change_email_screen.dart';
 import 'package:auto_flow/features/change_password/screen/change_password_screen.dart';
 import 'package:auto_flow/features/legalities/privacy_policy/screen/privacy_policy_screen.dart';
 import 'package:auto_flow/features/legalities/terms_and_conditions/screen/terms_and_conditions_screen.dart';
+import 'package:auto_flow/features/profile/screen/profile_screen.dart';
+import 'package:auto_flow/features/profile/service/profile_service.dart';
 import 'package:auto_flow/features/theme_setting/screen/theme_setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/features/settings/widgets/settings_section_card.dart';
@@ -14,6 +17,68 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+
+  Future<void> _doLogout(BuildContext context) async {
+    await LoginService.logout(); // Wipes authToken, userData, userId
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account?'),
+        content: const Text(
+          'This is permanent and cannot be undone. All your workspaces, documents, and data will be permanently removed.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    final storage = const FlutterSecureStorage();
+    final userId = await storage.read(key: 'userId');
+    if (userId == null || !context.mounted) return;
+
+    final result = await ProfileService.deleteAccount(userId);
+    if (!context.mounted) return;
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account deleted successfully')),
+      );
+      await LoginService.logout();
+      if (!context.mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to delete account'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,24 +119,9 @@ class SettingsScreen extends StatelessWidget {
                             },
                             child: Text("Cancel"),
                           ),
-
                           Expanded(
                             child: CustomButton(
-                              onPressed: () async {
-                                final storage = const FlutterSecureStorage();
-
-                                await storage.delete(key: 'accessToken');
-
-                                if (!context.mounted) return;
-
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => LoginScreen(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
+                              onPressed: () => _doLogout(context),
                               text: "Logout",
                             ),
                           ),
@@ -93,13 +143,25 @@ class SettingsScreen extends StatelessWidget {
             title: "Account & Security",
             children: [
               SettingsTile(
+                icon: Icons.person_outline,
+                title: "My Profile",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfileScreen(),
+                    ),
+                  );
+                },
+              ),
+              SettingsTile(
                 icon: Icons.key,
                 title: "Change Password",
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ChangePasswordScreen(),
+                      builder: (context) => const ChangePasswordScreen(),
                     ),
                   );
                 },
@@ -187,7 +249,7 @@ class SettingsScreen extends StatelessWidget {
                 icon: Icons.delete_outline,
                 title: "Delete Account",
                 isDestructive: true,
-                onTap: () {},
+                onTap: () => _confirmDeleteAccount(context),
               ),
             ],
           ),

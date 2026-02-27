@@ -1,13 +1,13 @@
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/features/detail/screen/detail_screen.dart';
 import 'package:auto_flow/features/history/widgets/file_tiles.dart';
-import 'package:auto_flow/features/upload/screen/concept_analysis_screen.dart';
-import 'package:auto_flow/features/upload/screen/custom_analysis_screen.dart';
+import 'package:auto_flow/features/detail/screen/report_analysis_screen.dart';
 import 'package:auto_flow/features/workspace/service/workspace_service.dart';
 import 'package:auto_flow/models/api_models/analysis_model.dart';
 import 'package:auto_flow/models/api_models/workspace_model.dart';
 import 'package:auto_flow/services/analysis_service.dart';
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -70,18 +70,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _navigateToAnalysis(AnalysisModel analysis) {
-    if (analysis.formatType == 'concept') {
+    if (analysis.formatType == 'report') {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ConceptAnalysisScreen(analysis: analysis),
-        ),
-      );
-    } else if (analysis.formatType == 'custom') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CustomAnalysisScreen(analysis: analysis),
+          builder: (context) => ReportAnalysisScreen(analysis: analysis),
         ),
       );
     } else {
@@ -178,6 +171,32 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
+  Future<void> _downloadAnalysis(AnalysisModel analysis) async {
+    final id = analysis.analysisId;
+    final name = analysis.fileName;
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot download: Missing file info')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Downloading...'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+    final path = await AnalysisService.downloadDocument(id, name);
+    if (!mounted) return;
+    if (path != null) {
+      await OpenFilex.open(path);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to download document.')),
+      );
+    }
+  }
+
   void _showOptions(AnalysisModel analysis) {
     showModalBottomSheet(
       context: context,
@@ -191,6 +210,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                ListTile(
+                  leading: const Icon(Icons.open_in_new, color: Colors.indigo),
+                  title: const Text('Preview / Download'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _downloadAnalysis(analysis);
+                  },
+                ),
                 ListTile(
                   leading: const Icon(Icons.upload_file, color: Colors.blue),
                   title: const Text('Upload to Workspace'),

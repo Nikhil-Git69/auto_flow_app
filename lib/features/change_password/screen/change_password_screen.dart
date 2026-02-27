@@ -1,9 +1,8 @@
-import 'dart:ffi';
-
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
+import 'package:auto_flow/features/profile/service/profile_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -15,22 +14,64 @@ class ChangePasswordScreen extends StatefulWidget {
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
-  final bool _isLoading = false;
+  bool _isLoading = false;
 
   final _formKey = GlobalKey<FormState>();
+  final _storage = const FlutterSecureStorage();
 
-  final _storage = FlutterSecureStorage();
-
-  TextEditingController oldPasswordController = TextEditingController();
-  TextEditingController newPasswordController = TextEditingController();
-  TextEditingController confirmNewPasswordController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmNewPasswordController =
+      TextEditingController();
 
   @override
   void dispose() {
-    oldPasswordController.dispose();
-    newPasswordController.dispose();
-    confirmNewPasswordController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmNewPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleChangePassword() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final userId = await _storage.read(key: 'userId');
+    if (userId == null) {
+      _showSnack('Session expired. Please log in again.', Colors.red);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await ProfileService.changePassword(
+      userId,
+      currentPassword: _currentPasswordController.text,
+      newPassword: _newPasswordController.text,
+    );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      _showSnack('Password changed successfully!', Colors.green);
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) Navigator.pop(context);
+      });
+    } else {
+      _showSnack(result['message'] ?? 'Failed to change password', Colors.red);
+    }
+  }
+
+  void _showSnack(String msg, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -56,11 +97,15 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // ── Requirements card ──────────────────────────────────────────
               Container(
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   color: colorScheme.surface,
+                  border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Padding(
                   padding: AppPaddings.all16,
@@ -68,48 +113,37 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Password Requirements:",
+                        'Password Requirements:',
                         style: AppTextStyles.midHeader(
                           context,
                         ).copyWith(color: colorScheme.onSurface),
                       ),
-                      SizedBox(height: 5),
-                      Text(
-                        "• At least 1 uppercase letter",
-                        style: AppTextStyles.smallHeader(
-                          context,
-                        ).copyWith(color: colorScheme.onSurface),
-                      ),
-                      Text(
-                        "• At least 1 lowercase letter",
-                        style: AppTextStyles.smallHeader(
-                          context,
-                        ).copyWith(color: colorScheme.onSurface),
-                      ),
-                      Text(
-                        "• At least 1 digit",
-                        style: AppTextStyles.smallHeader(
-                          context,
-                        ).copyWith(color: colorScheme.onSurface),
-                      ),
-                      Text(
-                        "• At least 1 special character",
-                        style: AppTextStyles.smallHeader(
-                          context,
-                        ).copyWith(color: colorScheme.onSurface),
-                      ),
-                      Text(
-                        "• Length between 8-15 characters",
-                        style: AppTextStyles.smallHeader(
-                          context,
-                        ).copyWith(color: colorScheme.onSurface),
+                      const SizedBox(height: 8),
+                      ...[
+                        '• At least 1 uppercase letter',
+                        '• At least 1 lowercase letter',
+                        '• At least 1 digit',
+                        '• At least 1 special character',
+                        '• Length between 8–15 characters',
+                      ].map(
+                        (req) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            req,
+                            style: AppTextStyles.smallHeader(
+                              context,
+                            ).copyWith(color: colorScheme.onSurface),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
+
+              // ── Form ───────────────────────────────────────────────────────
               Form(
                 key: _formKey,
                 child: Container(
@@ -125,41 +159,59 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   child: Column(
                     children: [
                       CustTextfield(
-                        icon: Icons.lock,
-                        labelText: "Old Password",
-                        controller: oldPasswordController,
+                        icon: Icons.lock_outline,
+                        labelText: 'Current Password',
+                        controller: _currentPasswordController,
                         keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                        validator: (v) => v == null || v.isEmpty
+                            ? 'Enter your current password'
+                            : null,
                       ),
-
                       const SizedBox(height: 24),
-
                       CustTextfield(
-                        icon: Icons.lock,
-                        labelText: "New Password",
-                        controller: newPasswordController,
+                        icon: Icons.lock_reset,
+                        labelText: 'New Password',
+                        controller: _newPasswordController,
                         keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Enter a new password';
+                          if (v.length < 8 || v.length > 15) {
+                            return 'Password must be 8–15 characters';
+                          }
+                          if (!RegExp(r'[A-Z]').hasMatch(v))
+                            return 'Need at least 1 uppercase';
+                          if (!RegExp(r'[a-z]').hasMatch(v))
+                            return 'Need at least 1 lowercase';
+                          if (!RegExp(r'[0-9]').hasMatch(v))
+                            return 'Need at least 1 digit';
+                          if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(v)) {
+                            return 'Need at least 1 special character';
+                          }
+                          return null;
+                        },
                       ),
-
                       const SizedBox(height: 24),
-
                       CustTextfield(
-                        icon: Icons.lock,
-                        labelText: "Confirm New Password",
-                        controller: confirmNewPasswordController,
+                        icon: Icons.lock_reset,
+                        labelText: 'Confirm New Password',
+                        controller: _confirmNewPasswordController,
                         keyboardType: TextInputType.visiblePassword,
+                        isPassword: true,
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Please confirm your password';
+                          if (v != _newPasswordController.text)
+                            return 'Passwords do not match';
+                          return null;
+                        },
                       ),
-
                       const SizedBox(height: 24),
-
                       CustomButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                if (_formKey.currentState!.validate()) {
-                           
-                                }
-                              },
-                        text: _isLoading ? "Changing Password..." : "Confirm",
+                        onPressed: _isLoading ? null : _handleChangePassword,
+                        text: _isLoading ? 'Changing Password...' : 'Confirm',
                       ),
                     ],
                   ),

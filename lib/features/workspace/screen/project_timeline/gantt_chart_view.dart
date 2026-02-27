@@ -50,7 +50,6 @@ class GanttChartView extends StatelessWidget {
 
     return Column(
       children: [
-        // Header Row (Fixed vertical, scrollable horizontal)
         SizedBox(
           height: headerHeight,
           child: Row(
@@ -64,37 +63,15 @@ class GanttChartView extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics:
-                      const ClampingScrollPhysics(), // Sync handled loosely for now or just static header if simple
-                  // Actually, strictly syncing header scroll with body scroll is complex without a linked controller.
-                  // For a simple "MVP" Gantt, putting the header inside the scrollable area is easier,
-                  // BUT then the header scrolls away when scrolling down.
-                  // Let's try: The Header is part of the "Right Side" scroll view? No.
-                  // Let's put the header IN the scroll view for simplicity first.
-                  // BETTER APPROACH: Use a SingleChildScrollView(horizontal) for the WHOLE right side (header + body).
-                  // But wait, the left side (names) shouldn't scroll horizontal.
-                  // Complex structure:
-                  // Row [ LeftCol, Expanded( SingleChildScrollView(horizontal, Column(Header, Body))) ]
-                  // This works! Header and Body scroll horizontally together.
-                  // Vertical scrolling?
-                  // Provide SingleChildScrollView(vertical) for the Body only? Then Header stays fixed at top?
-                  // Yes!
-                  // Final Structure:
-                  // Row
-                  //  - Left: Column [ HeaderCell, Expanded(ListView(Names)) ]
-                  //  - Right: Expanded( SingleChildScrollView(horizontal, Column [ HeaderRow, Expanded(ListView(Bars)) ])) ]
-                  // wait, we need vertical sync between Names and Bars.
-                  // LinkedScrollController is needed for two separate ListViews.
-                  // OR:
-                  // SingleChildScrollView(vertical, Row( LeftCol, SingleChildScrollView(horizontal, RightCol) ))
-                  // This means header scrolls OFF screen when going down. That is acceptable for V1.
-                  itemBuilder: (context, index) => const SizedBox(),
-                  itemCount: 0,
-                ),
-              ),
+
+              // Expanded(
+              //   child: ListView.builder(
+              //     scrollDirection: Axis.horizontal,
+              //     physics: const ClampingScrollPhysics(),
+              //     itemBuilder: (context, index) => const SizedBox(),
+              //     itemCount: 0,
+              //   ),
+              // ),
             ],
           ),
         ),
@@ -106,7 +83,6 @@ class GanttChartView extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Fixed Name Column
                 SizedBox(
                   width: nameColumnWidth,
                   child: Column(
@@ -267,10 +243,12 @@ class GanttChartView extends StatelessWidget {
                                     onTap: () => onActivityTap(activity),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: barColor.withOpacity(0.8),
+                                        color: barColor.withValues(alpha: 0.8),
                                         borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
-                                          color: barColor.withOpacity(1.0),
+                                          color: barColor.withValues(
+                                            alpha: 1.0,
+                                          ),
                                           width: 1,
                                         ),
                                       ),

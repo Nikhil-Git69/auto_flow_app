@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
@@ -18,9 +17,12 @@ class WorkspaceScreen extends StatefulWidget {
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   List<WorkspaceModel> _workspaces = [];
   bool _isLoading = false;
+  bool _showArchived = false;
+  String _filterCategory = 'All'; // Used for filtering the list
 
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
+  final _categoryController = TextEditingController();
   final _joinCodeController = TextEditingController();
 
   @override
@@ -31,7 +33,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
 
   Future<void> _fetchWorkspaces() async {
     setState(() => _isLoading = true);
-    final result = await WorkspaceService.getAllWorkspaces();
+    final result = await WorkspaceService.getAllWorkspaces(
+      archived: _showArchived,
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -57,6 +61,9 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     final result = await WorkspaceService.createWorkspace(
       _nameController.text.trim(),
       _descController.text.trim(),
+      category: _categoryController.text.trim().isNotEmpty
+          ? _categoryController.text.trim()
+          : 'General',
     );
 
     if (!mounted) return;
@@ -67,6 +74,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       _fetchWorkspaces();
       _nameController.clear();
       _descController.clear();
+      _categoryController.clear();
     } else {
       _showSnack(result['message'] ?? "Failed to create workspace");
     }
@@ -105,33 +113,48 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   }
 
   void _showCreateDialog() {
+    _categoryController.clear();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Create Workspace"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustTextfield(
-              controller: _nameController,
-              labelText: "Name",
-              icon: Icons.work_outline,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text("Create Workspace"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustTextfield(
+                  controller: _nameController,
+                  labelText: "Name",
+                  icon: Icons.work_outline,
+                ),
+                const SizedBox(height: 16),
+                CustTextfield(
+                  controller: _descController,
+                  labelText: "Description (Optional)",
+                  icon: Icons.description_outlined,
+                ),
+                const SizedBox(height: 16),
+                CustTextfield(
+                  controller: _categoryController,
+                  labelText: "Category",
+                  icon: Icons.category_outlined,
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            CustTextfield(
-              controller: _descController,
-              labelText: "Description (Optional)",
-              icon: Icons.description_outlined,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          CustomButton(text: "Create", onPressed: _createWorkspace, width: 100),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              CustomButton(
+                text: "Create",
+                onPressed: _createWorkspace,
+                width: 100,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -187,6 +210,31 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
               ),
               const SizedBox(height: 24),
               ListTile(
+                leading: const Icon(Icons.edit_outlined, color: Colors.orange),
+                title: const Text(
+                  "Edit Workspace",
+                  style: TextStyle(color: Colors.orange),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _editWorkspace(ws);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  ws.isArchived ? Icons.unarchive : Icons.archive,
+                  color: Colors.blue,
+                ),
+                title: Text(
+                  ws.isArchived ? "Unarchive Workspace" : "Archive Workspace",
+                  style: const TextStyle(color: Colors.blue),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _toggleArchiveStatus(ws);
+                },
+              ),
+              ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text(
                   "Delete Workspace",
@@ -202,6 +250,94 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         );
       },
     );
+  }
+
+  Future<void> _editWorkspace(WorkspaceModel ws) async {
+    final nameController = TextEditingController(text: ws.name);
+    final descController = TextEditingController(text: ws.description ?? '');
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Edit Workspace"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: "Workspace Name",
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(
+                labelText: "Description (Optional)",
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final newName = nameController.text.trim();
+    if (newName.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    final result = await WorkspaceService.updateWorkspace(
+      ws.id,
+      name: newName,
+      description: descController.text.trim().isNotEmpty
+          ? descController.text.trim()
+          : null,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      _showSnack("Workspace updated");
+      _fetchWorkspaces();
+    } else {
+      _showSnack(result['message'] ?? "Failed to update workspace");
+    }
+  }
+
+  Future<void> _toggleArchiveStatus(WorkspaceModel ws) async {
+    setState(() => _isLoading = true);
+
+    Map<String, dynamic> result;
+    if (ws.isArchived) {
+      result = await WorkspaceService.unarchiveWorkspace(ws.id);
+    } else {
+      result = await WorkspaceService.archiveWorkspace(ws.id);
+    }
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      _showSnack(ws.isArchived ? "Workspace unarchived" : "Workspace archived");
+      _fetchWorkspaces();
+    } else {
+      _showSnack(result['message'] ?? "Failed to update workspace status");
+    }
   }
 
   void _confirmDelete(WorkspaceModel ws) {
@@ -258,6 +394,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         backgroundColor: colorScheme.surface,
         actions: [
           IconButton(
+            icon: Icon(_showArchived ? Icons.archive : Icons.archive_outlined),
+            tooltip: _showArchived ? "View Active" : "View Archived",
+            onPressed: () {
+              setState(() {
+                _showArchived = !_showArchived;
+              });
+              _fetchWorkspaces();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchWorkspaces,
           ),
@@ -265,138 +411,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _workspaces.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.workspaces_outlined,
-                    size: 64,
-                    color: colorScheme.outline,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No Workspaces Found",
-                    style: AppTextStyles.subMidHeader(context),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Create one or join existing.",
-                    style: AppTextStyles.smallHeader(
-                      context,
-                    ).copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: AppPaddings.all16,
-              itemCount: _workspaces.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final ws = _workspaces[index];
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WorkspaceDetailScreen(workspace: ws),
-                      ),
-                    );
-                  },
-                  onLongPress: () => _showOptionsBottomSheet(ws),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: colorScheme.outlineVariant),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.shadow.withValues(alpha: 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.workspaces,
-                                color: colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    ws.name,
-                                    style: AppTextStyles.subMidHeader(
-                                      context,
-                                    ).copyWith(fontSize: 18),
-                                  ),
-                                  if (ws.description != null &&
-                                      ws.description!.isNotEmpty)
-                                    Text(
-                                      ws.description!,
-                                      style: TextStyle(
-                                        color: colorScheme.onSurfaceVariant,
-                                        fontSize: 13,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: colorScheme.outline,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              "${ws.createdAt.day}/${ws.createdAt.month}/${ws.createdAt.year}",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.outline,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              "${ws.documents?.length ?? 0} Docs",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+          : _buildBody(colorScheme),
       floatingActionButton: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -417,6 +432,236 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody(ColorScheme colorScheme) {
+    if (_workspaces.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.workspaces_outlined,
+              size: 64,
+              color: colorScheme.outline,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _showArchived ? "No Archived Workspaces" : "No Workspaces Found",
+              style: AppTextStyles.subMidHeader(context),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _showArchived
+                  ? "You haven't archived any workspaces."
+                  : "Create one or join existing.",
+              style: AppTextStyles.smallHeader(
+                context,
+              ).copyWith(color: colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final categories = {
+      'All',
+      ..._workspaces.map((w) => w.category ?? 'General'),
+    }.toList();
+    if (!categories.contains(_filterCategory)) {
+      _filterCategory = 'All';
+    }
+
+    final displayedWorkspaces = _workspaces.where((w) {
+      if (_filterCategory == 'All') return true;
+      return (w.category ?? 'General') == _filterCategory;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (categories.length > 2)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: categories.map((cat) {
+                final isSelected = _filterCategory == cat;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(cat),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        _filterCategory = cat;
+                      });
+                    },
+                    selectedColor: colorScheme.primary.withValues(alpha: 0.2),
+                    checkmarkColor: colorScheme.primary,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        Expanded(
+          child: displayedWorkspaces.isEmpty
+              ? const Center(
+                  child: Text("No workspaces match the selected category."),
+                )
+              : ListView.separated(
+                  padding: AppPaddings.all16,
+                  itemCount: displayedWorkspaces.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final ws = displayedWorkspaces[index];
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                WorkspaceDetailScreen(workspace: ws),
+                          ),
+                        );
+                      },
+                      onLongPress: () => _showOptionsBottomSheet(ws),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: colorScheme.outlineVariant),
+                          boxShadow: [
+                            BoxShadow(
+                              color: colorScheme.shadow.withValues(alpha: 0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.workspaces,
+                                    color: colorScheme.onPrimaryContainer,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        ws.name,
+                                        style: AppTextStyles.subMidHeader(
+                                          context,
+                                        ).copyWith(fontSize: 18),
+                                      ),
+                                      if (ws.isArchived)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.shade100,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: const Text(
+                                            "Archived",
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.amber,
+                                            ),
+                                          ),
+                                        ),
+                                      if (ws.description != null &&
+                                          ws.description!.isNotEmpty)
+                                        Text(
+                                          ws.description!,
+                                          style: TextStyle(
+                                            color: colorScheme.onSurfaceVariant,
+                                            fontSize: 13,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 14,
+                                  color: colorScheme.outline,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "${ws.createdAt.day}/${ws.createdAt.month}/${ws.createdAt.year}",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.outline,
+                                  ),
+                                ),
+                                const Spacer(),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    ws.category ?? 'General',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSecondaryContainer,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "${ws.documents?.length ?? 0} Docs",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

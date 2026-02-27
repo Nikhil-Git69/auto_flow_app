@@ -139,6 +139,63 @@ class _CommentsScreenState extends State<CommentsScreen> {
     }
   }
 
+  Future<void> _editComment(CommentModel comment) async {
+    final editController = TextEditingController(text: comment.text);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Edit Comment"),
+        content: TextField(
+          controller: editController,
+          decoration: const InputDecoration(
+            hintText: "Update your comment...",
+            border: OutlineInputBorder(),
+          ),
+          maxLines: null,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || editController.text.trim().isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await WorkspaceService.editDocumentComment(
+      widget.workspaceId,
+      widget.analysis.analysisId ?? '',
+      comment.id,
+      editController.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      await _refreshComments();
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Failed to edit comment')),
+      );
+    }
+  }
+
   Future<void> _deleteComment(String commentId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -388,6 +445,18 @@ class _CommentsScreenState extends State<CommentsScreen> {
                         ),
                       ),
                       if (isMe) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => _editComment(comment),
+                          child: Text(
+                            "Edit",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         GestureDetector(
                           onTap: () => _deleteComment(comment.id),

@@ -6,14 +6,14 @@ class AnalysisModel {
   final int totalScore;
   final List<AnalysisIssue> issues;
   final String summary;
-  final String? formatType; // 'default', 'custom', 'concept'
+  final String? formatType;
   final String? analysisType;
-  final String? processedContent; // HTML content for WBS
+  final String? processedContent;
   final String? correctedContent;
   final String? correctedPdfBase64;
   final String? status;
   final String? userId;
-  final String? formatRequirements; // For Custom Analysis
+  final String? formatRequirements;
   final Map<String, dynamic>? metadata;
   final List<CommentModel>? comments;
 

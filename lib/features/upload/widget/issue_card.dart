@@ -13,7 +13,6 @@ class IssueCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isCustomFormat = issue.customFormatIssue;
 
-    // Determine colors based on severity and type
     Color severityColor;
     if (issue.severity == 'Critical') {
       severityColor = colorScheme.error;

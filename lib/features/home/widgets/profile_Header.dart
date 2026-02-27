@@ -1,4 +1,6 @@
+import 'package:auto_flow/constants/api_urls.dart';
 import 'package:auto_flow/models/api_models/user_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 class ProfileHeader extends StatelessWidget {
@@ -16,10 +18,17 @@ class ProfileHeader extends StatelessWidget {
     return parts[0][0].toUpperCase();
   }
 
+  String? _resolveAvatarUrl(String? rawUrl) {
+    if (rawUrl == null || rawUrl.isEmpty) return null;
+    if (rawUrl.startsWith('http')) return rawUrl;
+    return '${ApiUrl.baseUrl}$rawUrl';
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = user?.name ?? "Loading...";
     final email = user?.email ?? "...";
+    final avatarUrl = _resolveAvatarUrl(user?.logoUrl);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -33,13 +42,36 @@ class ProfileHeader extends StatelessWidget {
           CircleAvatar(
             radius: 26,
             backgroundColor: colorScheme.primary,
-            child: Text(
-              _getInitials(name),
-              style: TextStyle(
-                color: colorScheme.onPrimary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            child: avatarUrl != null
+                ? ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: avatarUrl,
+                      width: 52,
+                      height: 52,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Text(
+                        _getInitials(name),
+                        style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      errorWidget: (_, __, ___) => Text(
+                        _getInitials(name),
+                        style: TextStyle(
+                          color: colorScheme.onPrimary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
+                : Text(
+                    _getInitials(name),
+                    style: TextStyle(
+                      color: colorScheme.onPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(

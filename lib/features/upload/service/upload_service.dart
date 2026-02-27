@@ -125,23 +125,23 @@ class UploadService {
   }
 
   // Helper to generate requirements string from a Map (similar to Dashboard.tsx)
-  static String generateRequirementsString(Map<String, dynamic> fields) {
-    if (fields.isEmpty) return "";
+  // static String generateRequirementsString(Map<String, dynamic> fields) {
+  //   if (fields.isEmpty) return "";
 
-    final buffer = StringBuffer();
-    buffer.writeln("### MANDATORY FORMATTING RULES ###");
+  //   final buffer = StringBuffer();
+  //   buffer.writeln("### MANDATORY FORMATTING RULES ###");
 
-    fields.forEach((key, value) {
-      if (value != null && value.toString().isNotEmpty && value != 'Default') {
-        buffer.writeln(
-          "!!! RULE: DOCUMENT MUST USE ${value.toString().toUpperCase()} FOR ${key.toUpperCase()} !!!",
-        );
-      }
-    });
+  //   fields.forEach((key, value) {
+  //     if (value != null && value.toString().isNotEmpty && value != 'Default') {
+  //       buffer.writeln(
+  //         "!!! RULE: DOCUMENT MUST USE ${value.toString().toUpperCase()} FOR ${key.toUpperCase()} !!!",
+  //       );
+  //     }
+  //   });
 
-    final result = buffer.toString();
-    return result.length <= "### MANDATORY FORMATTING RULES ###\n".length
-        ? "Standard formatting."
-        : result;
-  }
+  //   final result = buffer.toString();
+  //   return result.length <= "### MANDATORY FORMATTING RULES ###\n".length
+  //       ? "Standard formatting."
+  //       : result;
+  // }
 }

@@ -50,6 +50,17 @@ class LoginService {
         };
       }
     } else {
+      // Check if unverified account
+      final rawData = response['data'];
+      if (rawData is Map<String, dynamic> &&
+          rawData['requiresVerification'] == true) {
+        return {
+          "success": false,
+          "requiresVerification": true,
+          "email": rawData['email'] ?? '',
+          "message": rawData['error'] ?? 'Please verify your email.',
+        };
+      }
       return {
         "success": false,
         "message": response['message'] ?? "Login failed",

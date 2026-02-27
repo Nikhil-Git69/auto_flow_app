@@ -2,7 +2,9 @@ import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/constants/app_textstyles.dart';
 import 'package:auto_flow/features/upload/widget/issue_card.dart';
 import 'package:auto_flow/models/api_models/analysis_model.dart';
+import 'package:auto_flow/services/analysis_service.dart';
 import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
 
 class DetailScreen extends StatefulWidget {
   final AnalysisModel analysis;
@@ -14,6 +16,63 @@ class DetailScreen extends StatefulWidget {
 }
 
 class _DetailScreenState extends State<DetailScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _handleDownload({bool preview = false}) async {
+    final id = widget.analysis.analysisId;
+    final name = widget.analysis.fileName;
+
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot download: Missing file details')),
+      );
+      return;
+    }
+
+    setState(() => _isDownloading = true);
+    try {
+      final path = await AnalysisService.downloadDocument(
+        id,
+        name,
+        isPreview: preview,
+      );
+      if (path != null) {
+        if (preview) {
+          final result = await OpenFilex.open(path);
+          if (result.type != ResultType.done && mounted) {
+            final msg =
+                result.message.contains('No app found') ||
+                    name.toLowerCase().endsWith('.docx')
+                ? 'Could not preview file. You may need a Word viewer installed, or try downloading it instead.'
+                : 'Could not open preview: ${result.message}';
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(msg)));
+          }
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Saved successfully to Downloads folder!'),
+              backgroundColor: Colors.teal.shade600,
+            ),
+          );
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to download document.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -31,6 +90,52 @@ class _DetailScreenState extends State<DetailScreen> {
         backgroundColor: colorScheme.primary,
         surfaceTintColor: Colors.transparent,
         iconTheme: IconThemeData(color: colorScheme.onPrimary),
+        actions: [
+          if (_isDownloading)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )
+          else
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (value) {
+                if (value == 'download') _handleDownload();
+                if (value == 'preview') _handleDownload(preview: true);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'preview',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility_outlined),
+                      SizedBox(width: 8),
+                      Text('Preview'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'download',
+                  child: Row(
+                    children: [
+                      Icon(Icons.download_outlined),
+                      SizedBox(width: 8),
+                      Text('Download'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: Padding(
         padding: AppPaddings.all16,

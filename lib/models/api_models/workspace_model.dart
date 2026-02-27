@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'package:auto_flow/models/api_models/analysis_model.dart';
 import 'package:auto_flow/models/api_models/user_model.dart';
 import 'package:auto_flow/models/api_models/activity_model.dart';
+import 'package:auto_flow/models/api_models/admin_upload_model.dart';
 
 class WorkspaceModel {
   final String id;
@@ -9,11 +10,15 @@ class WorkspaceModel {
   final String? description;
   final String accessCode;
   final String ownerId;
+  final String? category;
   final List<String>? memberIds;
   final List<AnalysisModel>? documents;
   final DateTime createdAt;
   final List<UserModel>? members;
   final List<BoardModel>? boards;
+  final List<String>? coAdmins;
+  final bool isArchived;
+  final List<AdminUploadModel>? adminUploads;
 
   WorkspaceModel({
     required this.id,
@@ -21,15 +26,18 @@ class WorkspaceModel {
     this.description,
     required this.accessCode,
     required this.ownerId,
+    this.category,
     this.memberIds,
     this.documents,
     required this.createdAt,
     this.members,
     this.boards,
+    this.coAdmins,
+    this.isArchived = false,
+    this.adminUploads,
   });
 
   factory WorkspaceModel.fromJson(Map<String, dynamic> json) {
-
     final rawMembers = json['members'] as List<dynamic>?;
 
     final List<String> parsedMemberIds = [];
@@ -95,6 +103,34 @@ class WorkspaceModel {
       }
     }
 
+    // Parse adminUploads safely
+    final rawAdminUploads = json['adminUploads'] as List<dynamic>?;
+    final List<AdminUploadModel> parsedAdminUploads = [];
+    if (rawAdminUploads != null) {
+      for (final e in rawAdminUploads) {
+        if (e is Map<String, dynamic>) {
+          try {
+            parsedAdminUploads.add(AdminUploadModel.fromJson(e));
+          } catch (err) {
+            log('WorkspaceModel.fromJson: Error parsing adminUpload: $err');
+          }
+        }
+      }
+    }
+
+    // Parse coAdmins safely
+    final rawCoAdmins = json['coAdmins'] as List<dynamic>?;
+    final List<String> parsedCoAdmins = [];
+    if (rawCoAdmins != null) {
+      for (final e in rawCoAdmins) {
+        if (e is String) {
+          parsedCoAdmins.add(e);
+        } else if (e is Map) {
+          parsedCoAdmins.add(e['_id']?.toString() ?? '');
+        }
+      }
+    }
+
     return WorkspaceModel(
       id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Untitled Workspace',
@@ -105,10 +141,14 @@ class WorkspaceModel {
           : (json['ownerId'] is Map
                 ? json['ownerId']['_id']?.toString() ?? ''
                 : ''),
+      category: json['category']?.toString(),
       memberIds: parsedMemberIds,
       members: parsedMembers,
       documents: parsedDocs,
       boards: parsedBoards,
+      coAdmins: parsedCoAdmins,
+      isArchived: json['isArchived'] == true,
+      adminUploads: parsedAdminUploads,
       createdAt: json['createdAt'] != null
           ? (DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now())
           : DateTime.now(),
@@ -122,6 +162,7 @@ class WorkspaceModel {
       'description': description,
       'accessCode': accessCode,
       'ownerId': ownerId,
+      'category': category,
       'members': memberIds,
       'documents': documents?.map((e) => e.toJson()).toList(),
       'boards':
@@ -133,6 +174,9 @@ class WorkspaceModel {
       // 'boards': boards?.map((e) => { ... }).toList()
       // I'll skip complex toJson for boards as we likely won't send full board structure back in updateWorkspace usually.
       'createdAt': createdAt.toIso8601String(),
+      'coAdmins': coAdmins,
+      'isArchived': isArchived,
+      'adminUploads': adminUploads?.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -142,11 +186,15 @@ class WorkspaceModel {
     String? description,
     String? accessCode,
     String? ownerId,
+    String? category,
     List<String>? memberIds,
     List<AnalysisModel>? documents,
     DateTime? createdAt,
     List<UserModel>? members,
     List<BoardModel>? boards,
+    List<String>? coAdmins,
+    bool? isArchived,
+    List<AdminUploadModel>? adminUploads,
   }) {
     return WorkspaceModel(
       id: id ?? this.id,
@@ -154,11 +202,15 @@ class WorkspaceModel {
       description: description ?? this.description,
       accessCode: accessCode ?? this.accessCode,
       ownerId: ownerId ?? this.ownerId,
+      category: category ?? this.category,
       memberIds: memberIds ?? this.memberIds,
       documents: documents ?? this.documents,
       createdAt: createdAt ?? this.createdAt,
       members: members ?? this.members,
       boards: boards ?? this.boards,
+      coAdmins: coAdmins ?? this.coAdmins,
+      isArchived: isArchived ?? this.isArchived,
+      adminUploads: adminUploads ?? this.adminUploads,
     );
   }
 }

@@ -1,10 +1,12 @@
 import 'package:auto_flow/constants/app_paddings.dart';
 import 'package:auto_flow/features/auth/sign_up/screen/signup_screen.dart';
+import 'package:auto_flow/features/auth/sign_up/screen/verify_email_screen.dart';
 import 'package:auto_flow/features/navbar/screen/navbar_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_flow/core/custom_widgets/custom_button.dart';
 import 'package:auto_flow/core/custom_widgets/custom_textfields.dart';
 import 'package:auto_flow/features/auth/login/service/login_service.dart';
+import 'package:auto_flow/features/auth/forgot_password/widgets/forgot_password_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -58,6 +60,25 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => NavBarScreen()),
+      );
+      return;
+    }
+
+    // Handle unverified account — redirect to email verification
+    if (response['requiresVerification'] == true) {
+      final verifyEmail = response['email'] as String? ?? email;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VerifyEmailScreen(
+            email: verifyEmail,
+            onVerified: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => NavBarScreen()),
+              (_) => false,
+            ),
+          ),
+        ),
       );
       return;
     }
@@ -146,7 +167,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Spacer(),
                           TextButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) =>
+                                    const ForgotPasswordDialog(),
+                              );
+                            },
                             child: Text(
                               "Forgot password?",
                               style: TextStyle(color: colorScheme.primary),

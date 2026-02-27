@@ -111,7 +111,7 @@ class ReviewFileTile extends StatelessWidget {
             //   ),
 
             // Score
-            ScoreBadge(score: score),
+            // ScoreBadge(score: score),
           ],
         ),
       ),

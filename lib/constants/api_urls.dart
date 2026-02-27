@@ -21,11 +21,20 @@ class ApiUrl {
   // static const baseUrl = "http://192.168.18.148:5000";
 
   // static const baseUrl = "http://192.168.0.6:5000";
-  static const baseUrl = "http://10.200.174.164:5000";
+  // static const baseUrl = "http://10.200.174.164:5000";
 
+  //official
+  static const baseUrl = "https://auto-flow-backend.onrender.com";
+
+  // Auth
   static const String login = "$baseUrl/auth/login";
   static const String signup = "$baseUrl/auth/register";
   static const String me = "$baseUrl/auth/me";
+  static const String verifyEmail = "$baseUrl/auth/verify-email";
+  static const String resendOtp = "$baseUrl/auth/resend-otp";
+  static const String forgotPassword = "$baseUrl/auth/forgot-password";
+  static const String verifyResetOtp = "$baseUrl/auth/verify-reset-otp";
+  static const String resetPassword = "$baseUrl/auth/reset-password";
   static const String analysis = "$baseUrl/analysis/upload-file";
   static const String allWorkspaces = "$baseUrl/workspace";
   static const String createWorkspace = "$baseUrl/workspace/create";
@@ -34,4 +43,13 @@ class ApiUrl {
   // Comments
   static const String comments = "$baseUrl/workspace/comments";
   static const String deleteComment = "$baseUrl/workspace/comments";
+
+  // User Profile
+  static String userProfile(String userId) => "$baseUrl/users/$userId";
+  static String updateProfile(String userId) => "$baseUrl/users/$userId";
+  static String uploadAvatar(String userId) => "$baseUrl/users/$userId/avatar";
+  static String uploadBanner(String userId) => "$baseUrl/users/$userId/banner";
+  static String changePassword(String userId) =>
+      "$baseUrl/users/$userId/change-password";
+  static String deleteUser(String userId) => "$baseUrl/users/$userId";
 }

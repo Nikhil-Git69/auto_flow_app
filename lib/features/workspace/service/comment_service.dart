@@ -9,10 +9,6 @@ class CommentService {
     String documentId,
   ) async {
     try {
-      // Backend doesn't have a dedicated get-comments endpoint.
-      // Comments are part of the Workspace -> Documents structure.
-      // We must fetch the workspace and extract comments for the specific document.
-
       final response = await ApiClient.get(
         "${ApiUrl.allWorkspaces}/$workspaceId",
       );
